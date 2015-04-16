@@ -5,10 +5,10 @@
     using System.Diagnostics;
     using System.Linq;
 
-    using Graph;
-    using Graph.Nodes;
-
     using Inflection;
+
+    using OpenGraph;
+    using OpenGraph.Nodes;
 
     public class Program
     {
@@ -16,7 +16,7 @@
         {
             var mutableInflector = new ReflectingMutableTypeInflector();
 
-            var graphRoot = ObjectGraph.Create<Style>(mutableInflector);
+            var graphRoot = TypeGraph.Create<Style>(mutableInflector);
 
             var style = new Style();
 
@@ -28,7 +28,7 @@
             graphRoot.GetDescendants<TextStyle>().Aggregate(style, (x, y) => y.Set(x, new TextStyle()));
             graphRoot.GetDescendants<uint>().Aggregate(style, (x, y) => y.Set(x, 0x1337BEEF));
 
-            var graph = ObjectGraph.Create<Style>(new ReflectingMutableTypeInflector());
+            var graph = TypeGraph.Create<Style>(new ReflectingMutableTypeInflector());
 
             Test("Reflection        ", FetchColorsViaReflection, style);
             Test("Methods 1         ", FetchColorsViaMethods, style);
@@ -60,12 +60,12 @@
             var colors = GetAllColors(style).ToList();
         }
 
-        private static void FetchColorsViaOg(Style style, ObjectGraph<Style> graph)
+        private static void FetchColorsViaOg(Style style, TypeGraph<Style> typeGraph)
         {
-            var colors = graph.GetDescendants<uint>().Select(x => x.Get(style)).ToList();
+            var colors = typeGraph.GetDescendants<uint>().Select(x => x.Get(style)).ToList();
         }
 
-        private static void FetchColorsViaOgCached(Style style, List<IDescendant<Style, uint>> descendants)
+        private static void FetchColorsViaOgCached(Style style, List<ITypeDescendant<Style, uint>> descendants)
         {
             var colors = descendants.Select(x => x.Get(style)).ToList();
         }

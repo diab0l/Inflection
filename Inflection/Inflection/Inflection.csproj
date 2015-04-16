@@ -45,14 +45,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Graph\IClosedDescendant.cs" />
-    <Compile Include="Graph\IDescendant.cs" />
-    <Compile Include="Graph\IGraphRoot.cs" />
-    <Compile Include="Graph\Nodes\Descendant.cs" />
-    <Compile Include="Graph\Nodes\ObjectGraph.cs" />
-    <Compile Include="Graph\Visitors\ChildFinder.cs" />
-    <Compile Include="Graph\Visitors\DescendantBuilder.cs" />
-    <Compile Include="Graph\Visitors\IGraphNodeChildrenVisitor.cs" />
+    <Compile Include="Immutable\Maybe.cs" />
+    <Compile Include="ObjectGraph\IObjectDescendant.cs" />
+    <Compile Include="ObjectGraph\IObjectGraph.cs" />
+    <Compile Include="ObjectGraph\Nodes\ObjectDescendant.cs" />
+    <Compile Include="ObjectGraph\Nodes\ObjectGraph.cs" />
+    <Compile Include="OpenGraph\ITypeDescendant.cs" />
+    <Compile Include="OpenGraph\ITypeGraph.cs" />
+    <Compile Include="OpenGraph\Nodes\TypeDescendant.cs" />
+    <Compile Include="OpenGraph\Nodes\TypeGraph.cs" />
+    <Compile Include="OpenGraph\Visitors\ChildFinder.cs" />
+    <Compile Include="OpenGraph\Visitors\TypeDescendantBuilder.cs" />
+    <Compile Include="OpenGraph\Visitors\IGraphNodeChildrenVisitor.cs" />
     <Compile Include="Immutable\Descriptors\PropertyDescriptor.cs" />
     <Compile Include="Immutable\Descriptors\TypeDescriptor.cs" />
     <Compile Include="Immutable\IPropertyDescriptor.cs" />

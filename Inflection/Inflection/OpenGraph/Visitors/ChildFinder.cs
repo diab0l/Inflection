@@ -1,4 +1,4 @@
-﻿namespace Inflection.Graph.Visitors
+﻿namespace Inflection.OpenGraph.Visitors
 {
     using System.Collections.Immutable;
     using System.Reflection;
@@ -6,9 +6,9 @@
     public class ChildFinder<TRoot> : IGraphNodeChildrenVisitor<TRoot>
     {
         private MemberInfo member;
-        private IDescendant<TRoot> result;
+        private ITypeDescendant<TRoot> result;
 
-        public IDescendant<TRoot> TryGetChild(IDescendant<TRoot> node, MemberInfo member)
+        public ITypeDescendant<TRoot> TryGetChild(ITypeDescendant<TRoot> node, MemberInfo member)
         {
             this.member = member;
             node.Accept(this);
@@ -18,7 +18,7 @@
             return result;
         }
 
-        public void Visit<TNode>(ImmutableDictionary<MemberInfo, IDescendant<TRoot>> children)
+        public void Visit<TNode>(ImmutableDictionary<MemberInfo, ITypeDescendant<TRoot>> children)
         {
             children.TryGetValue(this.member, out this.result);
         }

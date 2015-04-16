@@ -1,4 +1,4 @@
-namespace Inflection.Graph.Nodes
+namespace Inflection.OpenGraph.Nodes
 {
     using System;
     using System.Collections.Generic;
@@ -7,14 +7,14 @@ namespace Inflection.Graph.Nodes
     using System.Linq.Expressions;
     using System.Reflection;
 
-    using Immutable;
+    using global::Inflection.Immutable;
 
     using Visitors;
 
-    public static class Descendant
+    public static class TypeDescendant
     {
-        public static Descendant<TRoot, TNode> Create<TRoot, TParent, TNode>(
-            IDescendant<TRoot, TParent> parent,
+        public static TypeDescendant<TRoot, TNode> Create<TRoot, TParent, TNode>(
+            ITypeDescendant<TRoot, TParent> parent,
             IPropertyDescriptor<TParent, TNode> property)
         {
             var rootType = parent.RootType;
@@ -24,7 +24,7 @@ namespace Inflection.Graph.Nodes
             var getExpr = MergeGetExpressions(parent.GetExpression, property.GetExpression);
             var setExpr = MergeSetExpressions(parent.GetExpression, parent.SetExpression, property.SetExpression);
 
-            return new Descendant<TRoot, TNode>(rootType, property.PropertyType, get, set, getExpr, setExpr, property.PropertyType.GetProperties());
+            return new TypeDescendant<TRoot, TNode>(rootType, property.PropertyType, get, set, getExpr, setExpr, property.PropertyType.GetProperties());
         }
 
         private static Expression<Func<TRoot, TNode>> MergeGetExpressions<TRoot, TParent, TNode>(
@@ -142,7 +142,7 @@ namespace Inflection.Graph.Nodes
         }
     }
 
-    public class Descendant<TRoot, TNode> : IDescendant<TRoot, TNode>
+    public class TypeDescendant<TRoot, TNode> : ITypeDescendant<TRoot, TNode>
     {
         private readonly ITypeDescriptor<TNode> nodeType;
         private readonly ITypeDescriptor<TRoot> rootType;
@@ -153,9 +153,9 @@ namespace Inflection.Graph.Nodes
         private readonly Expression<Func<TRoot, TNode>> getExpression;
         private readonly Expression<Func<TRoot, TNode, TRoot>> setExpression;
 
-        private readonly Lazy<ImmutableDictionary<MemberInfo, IDescendant<TRoot>>> children;
+        private readonly Lazy<ImmutableDictionary<MemberInfo, ITypeDescendant<TRoot>>> children;
 
-        public Descendant(
+        public TypeDescendant(
             ITypeDescriptor<TRoot> rootType,
             ITypeDescriptor<TNode> nodeType,
             Func<TRoot, TNode> get,
@@ -171,10 +171,10 @@ namespace Inflection.Graph.Nodes
             this.getExpression = getExpression;
             this.setExpression = setExpression;
 
-            this.children = new Lazy<ImmutableDictionary<MemberInfo, IDescendant<TRoot>>>(() => ImmutableDictionary.CreateRange(this.CreateChildren(children)));
+            this.children = new Lazy<ImmutableDictionary<MemberInfo, ITypeDescendant<TRoot>>>(() => ImmutableDictionary.CreateRange(this.CreateChildren(children)));
         }
 
-        ITypeDescriptor IDescendant.RootType
+        ITypeDescriptor ITypeDescendant.RootType
         {
             get { return this.rootType; }
         }
@@ -184,7 +184,7 @@ namespace Inflection.Graph.Nodes
             get { return this.rootType; }
         }
 
-        ITypeDescriptor IDescendant.NodeType
+        ITypeDescriptor ITypeDescendant.NodeType
         {
             get { return this.nodeType; }
         }
@@ -194,7 +194,7 @@ namespace Inflection.Graph.Nodes
             get { return this.nodeType; }
         }
 
-        Expression IDescendant.GetExpression
+        Expression ITypeDescendant.GetExpression
         {
             get { return this.getExpression; }
         }
@@ -204,7 +204,7 @@ namespace Inflection.Graph.Nodes
             get { return this.getExpression; }
         }
 
-        Expression IDescendant.SetExpression
+        Expression ITypeDescendant.SetExpression
         {
             get { return this.setExpression; }
         }
@@ -224,41 +224,36 @@ namespace Inflection.Graph.Nodes
             get { return this.set; }
         }
 
-        protected ImmutableDictionary<MemberInfo, IDescendant<TRoot>> Children
+        protected ImmutableDictionary<MemberInfo, ITypeDescendant<TRoot>> Children
         {
             get { return this.children.Value; }
         }
 
-        void IDescendant<TRoot>.Accept(IGraphNodeChildrenVisitor<TRoot> visitor)
+        void ITypeDescendant<TRoot>.Accept(IGraphNodeChildrenVisitor<TRoot> visitor)
         {
             visitor.Visit<TNode>(this.Children);
         }
 
-        public IEnumerable<IDescendant<TRoot>> GetChildren()
+        public IEnumerable<ITypeDescendant<TRoot>> GetChildren()
         {
             return this.Children.Values;
         }
 
-        public IEnumerable<IDescendant<TRoot, T>> GetChildren<T>()
+        public IEnumerable<ITypeDescendant<TRoot, T>> GetChildren<T>()
         {
-            return this.Children.Values.OfType<IDescendant<TRoot, T>>();
+            return this.Children.Values.OfType<ITypeDescendant<TRoot, T>>();
         }
 
-        public IDescendant<TRoot, T> GetDescendant<T>(Expression<Func<TNode, T>> propertyExpr)
+        public ITypeDescendant<TRoot, T> GetDescendant<T>(Expression<Func<TNode, T>> propertyExpr)
         {
             var members = Unroll(propertyExpr).Reverse().GetEnumerator();
 
             return this.GetDescendant<T>(members);
         }
 
-        public IEnumerable<IDescendant<TRoot, TDescendant>> GetDescendants<TDescendant>()
+        public IEnumerable<ITypeDescendant<TRoot, TDescendant>> GetDescendants<TDescendant>()
         {
             return GetDescendantsInternal<TDescendant>(this, ImmutableHashSet.Create<ITypeDescriptor>());
-        }
-
-        public IEnumerable<IDescendant<TRoot, T>> GetDescendants<T>(Func<IDescendant<TRoot>, IEnumerable<IDescendant<TRoot>>> getChildren)
-        {
-            throw new NotImplementedException();
         }
 
         public override string ToString()
@@ -278,67 +273,67 @@ namespace Inflection.Graph.Nodes
             }
         }
 
-        protected static IEnumerable<IDescendant<TRoot, TDescendant>> GetDescendantsInternal<TDescendant>(IDescendant<TRoot> descendant, IImmutableSet<ITypeDescriptor> seenTypes)
+        protected static IEnumerable<ITypeDescendant<TRoot, TDescendant>> GetDescendantsInternal<TDescendant>(ITypeDescendant<TRoot> typeDescendant, IImmutableSet<ITypeDescriptor> seenTypes)
         {
-            if (seenTypes.Contains(descendant.NodeType))
+            if (seenTypes.Contains(typeDescendant.NodeType))
             {
                 throw new Exception("Cyclic graph detected");
             }
 
             var foo = new Foo<TRoot>();
 
-            foreach (var c in foo.GetChildren(descendant))
+            foreach (var c in foo.GetChildren(typeDescendant))
             {
-                if (c is IDescendant<TRoot, TDescendant>)
+                if (c is ITypeDescendant<TRoot, TDescendant>)
                 {
-                    yield return (IDescendant<TRoot, TDescendant>)c;
+                    yield return (ITypeDescendant<TRoot, TDescendant>)c;
                 }
 
-                foreach (var d in GetDescendantsInternal<TDescendant>(c, seenTypes.Add(descendant.NodeType)))
+                foreach (var d in GetDescendantsInternal<TDescendant>(c, seenTypes.Add(typeDescendant.NodeType)))
                 {
                     yield return d;
                 }
             }
         }
 
-        protected IDescendant<TRoot, T> GetDescendant<T>(IEnumerator<MemberInfo> members)
+        protected ITypeDescendant<TRoot, T> GetDescendant<T>(IEnumerator<MemberInfo> members)
         {
-            IDescendant<TRoot> descendant = this;
+            ITypeDescendant<TRoot> typeDescendant = this;
 
             var visitor = new ChildFinder<TRoot>();
 
             while (members.MoveNext())
             {
-                descendant = visitor.TryGetChild(descendant, members.Current);
+                typeDescendant = visitor.TryGetChild(typeDescendant, members.Current);
             }
 
-            return descendant as IDescendant<TRoot, T>;
+            return typeDescendant as ITypeDescendant<TRoot, T>;
         }
         
-        protected IEnumerable<KeyValuePair<MemberInfo, IDescendant<TRoot>>> CreateChildren(IEnumerable<IPropertyDescriptor<TNode>> props)
+        protected IEnumerable<KeyValuePair<MemberInfo, ITypeDescendant<TRoot>>> CreateChildren(IEnumerable<IPropertyDescriptor<TNode>> props)
         {
-            var builder = new DescendantBuilder<TRoot, TNode>();
+            var builder = new TypeDescendantBuilder<TRoot, TNode>();
 
             foreach (var p in props)
             {
                 var key = p.ClrMember;
                 var value = builder.Build(this, p);
 
-                yield return new KeyValuePair<MemberInfo, IDescendant<TRoot>>(key, value);
+                yield return new KeyValuePair<MemberInfo, ITypeDescendant<TRoot>>(key, value);
             }
         }
     }
 
     public class Foo<TRoot> : IGraphNodeChildrenVisitor<TRoot>
     {
-        private IEnumerable<IDescendant<TRoot>> children;
+        private IEnumerable<ITypeDescendant<TRoot>> children;
 
-        public void Visit<TNode>(ImmutableDictionary<MemberInfo, IDescendant<TRoot>> children)
+        public void Visit<TNode>(ImmutableDictionary<MemberInfo, ITypeDescendant<TRoot>> children)
         {
             this.children = children.Values;
         }
 
-        public IEnumerable<IDescendant<TRoot>> GetChildren(IDescendant<TRoot> desc)
+        public IEnumerable<ITypeDescendant<TRoot>> GetChildren(ITypeDescendant<TRoot> desc)
         {
             this.children = null;
 

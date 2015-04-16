@@ -58,8 +58,6 @@
             var method = foo.Method.GetGenericMethodDefinition().MakeGenericMethod(typeof(TDeclaring), prop.PropertyType);
 
             return method.Invoke(this, new object[] { prop, declaringType, propertyType, getter, setter }) as IPropertyDescriptor<TDeclaring>;
-
-            //return this.DescribeProperty(prop, declaringType, (dynamic)propertyType, (dynamic)getter, (dynamic)setter);
         }
 
         private IPropertyDescriptor<TDeclaring, TProperty> DescribeProperty<TDeclaring, TProperty>(

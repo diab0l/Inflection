@@ -1,4 +1,4 @@
-namespace Inflection.OpenGraph.Nodes
+namespace Inflection.Immutable.Graph.Nodes
 {
     using System;
     using System.Collections.Generic;
@@ -6,8 +6,13 @@ namespace Inflection.OpenGraph.Nodes
     using System.Linq;
     using System.Linq.Expressions;
     using System.Reflection;
+    using System.Runtime.Remoting.Messaging;
 
-    using global::Inflection.Immutable;
+    using Extensions;
+
+    using Monads;
+
+    using TypeSystem;
 
     using Visitors;
 
@@ -15,16 +20,32 @@ namespace Inflection.OpenGraph.Nodes
     {
         public static TypeDescendant<TRoot, TNode> Create<TRoot, TParent, TNode>(
             ITypeDescendant<TRoot, TParent> parent,
-            IPropertyDescriptor<TParent, TNode> property)
+            IImmutableProperty<TParent, TNode> property)
         {
             var rootType = parent.RootType;
             Func<TRoot, TNode> get = x => property.Get(parent.Get(x));
-            Func<TRoot, TNode, TRoot> set = (x, y) => parent.Set(x, property.Set(parent.Get(x), y));
+
+            var set = parent.Set
+                            .Apply(x => MergeSet(x, parent.Get, property.Set));
             
             var getExpr = MergeGetExpressions(parent.GetExpression, property.GetExpression);
             var setExpr = MergeSetExpressions(parent.GetExpression, parent.SetExpression, property.SetExpression);
 
             return new TypeDescendant<TRoot, TNode>(rootType, property.PropertyType, get, set, getExpr, setExpr, property.PropertyType.GetProperties());
+        }
+
+
+
+        private static IMaybe<Func<TRoot, TNode, TRoot>> MergeSet<TRoot, TParent, TNode>(Func<TRoot, TParent, TRoot> parentSet, Func<TRoot, TParent> parentGet, IMaybe<Func<TParent, TNode, TParent>> maybePropertySet)
+        {
+            var propertySet = maybePropertySet.GetValueOrDefault();
+            if (propertySet == null)
+            {
+                return new Nothing<Func<TRoot, TNode, TRoot>>();
+            }
+
+            Func<TRoot, TNode, TRoot> set = (x, y) => parentSet(x, propertySet(parentGet(x), y));
+            return Maybe.Return(set);
         }
 
         private static Expression<Func<TRoot, TNode>> MergeGetExpressions<TRoot, TParent, TNode>(
@@ -52,14 +73,17 @@ namespace Inflection.OpenGraph.Nodes
             return get;
         }
 
-        private static Expression<Func<TRoot, TNode, TRoot>> MergeSetExpressions<TRoot, TParent, TNode>(
+        private static IMaybe<Expression<Func<TRoot, TNode, TRoot>>> MergeSetExpressions<TRoot, TParent, TNode>(
             Expression<Func<TRoot, TParent>> parentGet,
-            Expression<Func<TRoot, TParent, TRoot>> parentSet,
-            Expression<Func<TParent, TNode, TParent>> nodeSet)
+            IMaybe<Expression<Func<TRoot, TParent, TRoot>>> maybeParentSet,
+            IMaybe<Expression<Func<TParent, TNode, TParent>>> maybeNodeSet)
         {
+            var parentSet = maybeParentSet.GetValueOrDefault();
+            var nodeSet = maybeNodeSet.GetValueOrDefault();
+
             if (parentSet == null || nodeSet == null)
             {
-                return null;
+                return new Nothing<Expression<Func<TRoot, TNode, TRoot>>>();
             }
 
             //// Func<TRoot, TNode, TRoot> set = (x, z) => parentSet(x, nodeSet(parentGet(x), z));
@@ -83,7 +107,7 @@ namespace Inflection.OpenGraph.Nodes
 
             var set = Expression.Lambda<Func<TRoot, TNode, TRoot>>(body, r, z);
 
-            return set;
+            return Maybe.Return(set);
         }
 
         private static Expression Replace(Expression @in, Expression old, Expression @new)
@@ -144,25 +168,25 @@ namespace Inflection.OpenGraph.Nodes
 
     public class TypeDescendant<TRoot, TNode> : ITypeDescendant<TRoot, TNode>
     {
-        private readonly ITypeDescriptor<TNode> nodeType;
-        private readonly ITypeDescriptor<TRoot> rootType;
+        private readonly IImmutableType<TNode> nodeType;
+        private readonly IImmutableType<TRoot> rootType;
 
         private readonly Func<TRoot, TNode> get;
-        private readonly Func<TRoot, TNode, TRoot> set;
+        private readonly IMaybe<Func<TRoot, TNode, TRoot>> set;
 
         private readonly Expression<Func<TRoot, TNode>> getExpression;
-        private readonly Expression<Func<TRoot, TNode, TRoot>> setExpression;
+        private readonly IMaybe<Expression<Func<TRoot, TNode, TRoot>>> setExpression;
 
         private readonly Lazy<ImmutableDictionary<MemberInfo, ITypeDescendant<TRoot>>> children;
 
         public TypeDescendant(
-            ITypeDescriptor<TRoot> rootType,
-            ITypeDescriptor<TNode> nodeType,
+            IImmutableType<TRoot> rootType,
+            IImmutableType<TNode> nodeType,
             Func<TRoot, TNode> get,
-            Func<TRoot, TNode, TRoot> set,
+            IMaybe<Func<TRoot, TNode, TRoot>> set,
             Expression<Func<TRoot, TNode>> getExpression,
-            Expression<Func<TRoot, TNode, TRoot>> setExpression,
-            IEnumerable<IPropertyDescriptor<TNode>> children)
+            IMaybe<Expression<Func<TRoot, TNode, TRoot>>> setExpression,
+            IEnumerable<IImmutableProperty<TNode>> children)
         {
             this.nodeType = nodeType;
             this.rootType = rootType;
@@ -174,22 +198,22 @@ namespace Inflection.OpenGraph.Nodes
             this.children = new Lazy<ImmutableDictionary<MemberInfo, ITypeDescendant<TRoot>>>(() => ImmutableDictionary.CreateRange(this.CreateChildren(children)));
         }
 
-        ITypeDescriptor ITypeDescendant.RootType
+        IImmutableType ITypeDescendant.RootType
         {
             get { return this.rootType; }
         }
 
-        public ITypeDescriptor<TRoot> RootType
+        public IImmutableType<TRoot> RootType
         {
             get { return this.rootType; }
         }
 
-        ITypeDescriptor ITypeDescendant.NodeType
+        IImmutableType ITypeDescendant.NodeType
         {
             get { return this.nodeType; }
         }
 
-        public ITypeDescriptor<TNode> NodeType
+        public IImmutableType<TNode> NodeType
         {
             get { return this.nodeType; }
         }
@@ -204,12 +228,12 @@ namespace Inflection.OpenGraph.Nodes
             get { return this.getExpression; }
         }
 
-        Expression ITypeDescendant.SetExpression
+        IMaybe<Expression> ITypeDescendant.SetExpression
         {
             get { return this.setExpression; }
         }
 
-        public Expression<Func<TRoot, TNode, TRoot>> SetExpression
+        public IMaybe<Expression<Func<TRoot, TNode, TRoot>>> SetExpression
         {
             get { return this.setExpression; }
         }
@@ -219,7 +243,7 @@ namespace Inflection.OpenGraph.Nodes
             get { return this.get; }
         }
 
-        public Func<TRoot, TNode, TRoot> Set
+        public IMaybe<Func<TRoot, TNode, TRoot>> Set
         {
             get { return this.set; }
         }
@@ -229,12 +253,32 @@ namespace Inflection.OpenGraph.Nodes
             get { return this.children.Value; }
         }
 
-        void ITypeDescendant<TRoot>.Accept(IGraphNodeChildrenVisitor<TRoot> visitor)
+        IEnumerable<ITypeDescendant> ITypeDescendant.GetChildren()
         {
-            visitor.Visit<TNode>(this.Children);
+            return this.Children.Values;
         }
 
-        public IEnumerable<ITypeDescendant<TRoot>> GetChildren()
+        void ITypeDescendant.Accept(ITypeDescendantVisitor visitor)
+        {
+            visitor.Visit(this);
+        }
+
+        public void Accept(ITypeDescendantChildrenVisitor visitor)
+        {
+            visitor.Visit<TRoot, TNode>(this.Children.MaybeGetValue, this.Children.Values);
+        }
+
+        void ITypeDescendant<TRoot>.Accept(ITypeDescendantVisitor<TRoot> visitor)
+        {
+            visitor.Visit(this);
+        }
+
+        void ITypeDescendant<TRoot>.Accept(ITypeDescendantChildrenVisitor<TRoot> visitor)
+        {
+            visitor.Visit<TNode>(this.Children.MaybeGetValue, this.Children.Values);
+        }
+
+        IEnumerable<ITypeDescendant<TRoot>> ITypeDescendant<TRoot>.GetChildren()
         {
             return this.Children.Values;
         }
@@ -244,7 +288,7 @@ namespace Inflection.OpenGraph.Nodes
             return this.Children.Values.OfType<ITypeDescendant<TRoot, T>>();
         }
 
-        public ITypeDescendant<TRoot, T> GetDescendant<T>(Expression<Func<TNode, T>> propertyExpr)
+        public IMaybe<ITypeDescendant<TRoot, T>> GetDescendant<T>(Expression<Func<TNode, T>> propertyExpr)
         {
             var members = Unroll(propertyExpr).Reverse().GetEnumerator();
 
@@ -253,7 +297,7 @@ namespace Inflection.OpenGraph.Nodes
 
         public IEnumerable<ITypeDescendant<TRoot, TDescendant>> GetDescendants<TDescendant>()
         {
-            return GetDescendantsInternal<TDescendant>(this, ImmutableHashSet.Create<ITypeDescriptor>());
+            return GetDescendantsInternal<TDescendant>(this, ImmutableHashSet.Create<IImmutableType>());
         }
 
         public override string ToString()
@@ -273,14 +317,14 @@ namespace Inflection.OpenGraph.Nodes
             }
         }
 
-        protected static IEnumerable<ITypeDescendant<TRoot, TDescendant>> GetDescendantsInternal<TDescendant>(ITypeDescendant<TRoot> typeDescendant, IImmutableSet<ITypeDescriptor> seenTypes)
+        protected static IEnumerable<ITypeDescendant<TRoot, TDescendant>> GetDescendantsInternal<TDescendant>(ITypeDescendant<TRoot> typeDescendant, IImmutableSet<IImmutableType> seenTypes)
         {
             if (seenTypes.Contains(typeDescendant.NodeType))
             {
                 throw new Exception("Cyclic graph detected");
             }
 
-            var foo = new Foo<TRoot>();
+            var foo = new ChildExtractionVisitor<TRoot>();
 
             foreach (var c in foo.GetChildren(typeDescendant))
             {
@@ -296,21 +340,20 @@ namespace Inflection.OpenGraph.Nodes
             }
         }
 
-        protected ITypeDescendant<TRoot, T> GetDescendant<T>(IEnumerator<MemberInfo> members)
+        protected IMaybe<ITypeDescendant<TRoot, T>> GetDescendant<T>(IEnumerator<MemberInfo> members)
         {
-            ITypeDescendant<TRoot> typeDescendant = this;
+            var descendant = Maybe.Return<ITypeDescendant<TRoot>>(this);
 
-            var visitor = new ChildFinder<TRoot>();
-
-            while (members.MoveNext())
+            var visitor = new ChildFinderVisitor<TRoot>();
+            while (!descendant.IsEmpty && members.MoveNext())
             {
-                typeDescendant = visitor.TryGetChild(typeDescendant, members.Current);
+                descendant = descendant.Apply(x => visitor.MaybeGetChild(x, members.Current));
             }
 
-            return typeDescendant as ITypeDescendant<TRoot, T>;
+            return descendant.Apply(x => Maybe.Return(x as ITypeDescendant<TRoot, T>));
         }
         
-        protected IEnumerable<KeyValuePair<MemberInfo, ITypeDescendant<TRoot>>> CreateChildren(IEnumerable<IPropertyDescriptor<TNode>> props)
+        protected IEnumerable<KeyValuePair<MemberInfo, ITypeDescendant<TRoot>>> CreateChildren(IEnumerable<IImmutableProperty<TNode>> props)
         {
             var builder = new TypeDescendantBuilder<TRoot, TNode>();
 
@@ -321,25 +364,6 @@ namespace Inflection.OpenGraph.Nodes
 
                 yield return new KeyValuePair<MemberInfo, ITypeDescendant<TRoot>>(key, value);
             }
-        }
-    }
-
-    public class Foo<TRoot> : IGraphNodeChildrenVisitor<TRoot>
-    {
-        private IEnumerable<ITypeDescendant<TRoot>> children;
-
-        public void Visit<TNode>(ImmutableDictionary<MemberInfo, ITypeDescendant<TRoot>> children)
-        {
-            this.children = children.Values;
-        }
-
-        public IEnumerable<ITypeDescendant<TRoot>> GetChildren(ITypeDescendant<TRoot> desc)
-        {
-            this.children = null;
-
-            desc.Accept(this);
-
-            return this.children;
         }
     }
 }

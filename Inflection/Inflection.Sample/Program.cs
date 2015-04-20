@@ -1,15 +1,26 @@
-﻿namespace Inflection
+﻿namespace Inflection.Sample
 {
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using System.Linq.Expressions;
 
-    using Inflection;
-
-    using OpenGraph;
-    using OpenGraph.Nodes;
-
+    using Immutable;
+    using Immutable.Graph;
+    using Immutable.Monads;
+    
+    /* TODO: Write a benchmarking suite
+     * Outline: Create a range of randomly nested data-structures with certain properties (lazy, memoizing, infinite, non-nullable)
+     *          and see how
+     *          - straight-forward reflection
+     *          - the TypeGraph,
+     *          - the ObjectGraph and
+     *          - "handwritten" methods (generated typed-out code)
+     *          perform memory and cpu wise on
+     *          - querying the data-structures for certain elements in the hierarchy
+     *          - querying the data-structures for all elements of a kind
+     */
     public class Program
     {
         public static void Main(string[] args)
@@ -20,24 +31,30 @@
 
             var style = new Style();
 
-            graphRoot.GetDescendants<StyleInfo>().Aggregate(style, (x, y) => y.Set(x, new StyleInfo()));
-            graphRoot.GetDescendants<ToolbarStyle>().Aggregate(style, (x, y) => y.Set(x, new ToolbarStyle()));
-            graphRoot.GetDescendants<ButtonStyle>().Aggregate(style, (x, y) => y.Set(x, new ButtonStyle()));
-            graphRoot.GetDescendants<ControlPart>().Aggregate(style, (x, y) => y.Set(x, new ControlPart()));
-            graphRoot.GetDescendants<Texture>().Aggregate(style, (x, y) => y.Set(x, new Texture()));
-            graphRoot.GetDescendants<TextStyle>().Aggregate(style, (x, y) => y.Set(x, new TextStyle()));
-            graphRoot.GetDescendants<uint>().Aggregate(style, (x, y) => y.Set(x, 0x1337BEEF));
+            InitializeMutable(graphRoot, style, () => new StyleInfo());
+            InitializeMutable(graphRoot, style, () => new ToolbarStyle());
+            InitializeMutable(graphRoot, style, () => new ButtonStyle());
+            InitializeMutable(graphRoot, style, () => new ControlPart());
+            InitializeMutable(graphRoot, style, () => new Texture());
+            InitializeMutable(graphRoot, style, () => new TextStyle());
+            InitializeMutable(graphRoot, style, () => (uint)0x1337BEEF);
+
+            var obj = ObjectGraph.Create(new ReflectingMutableTypeInflector(), style);
 
             var graph = TypeGraph.Create<Style>(new ReflectingMutableTypeInflector());
 
-            Test("Reflection        ", FetchColorsViaReflection, style);
-            Test("Methods 1         ", FetchColorsViaMethods, style);
-            Test("ObjectGraph 1     ", x => FetchColorsViaOg(x, graph), style);
-            Test("Methods 2         ", FetchColorsViaMethods, style);
-            Test("ObjectGraph 2     ", x => FetchColorsViaOg(x, graph), style);
+            Test("Reflection          ", FetchColorsViaReflection, style);
+            Test("Handwritten Methods ", FetchColorsViaMethods, style);
+            //Test("TypeGraph           ", x => FetchColorsViaTg(x, graph), style);
+            Test("ObjectGraph         ", x => FetchColorsViaOg(x, obj), style);
 
-            var cache = graph.GetDescendants<uint>().ToList();
-            Test("ObjectGraph Cached", x => FetchColorsViaOgCached(x, cache), style);
+            //var cache = graph.GetDescendants<uint>().ToList();
+            //Test("TypeGraph Cached    ", x => FetchColorsViaTgCached(x, cache), style);
+        }
+
+        private static void InitializeMutable<T>(TypeGraph<Style> graphRoot, Style style, Func<T> value)
+        {
+            graphRoot.GetDescendants<T>().Aggregate(Maybe.Return(style), (mx, y) => mx.Bind(x => y.Set.Transform(z => z(x, value()))));
         }
 
         private static void Test(string name, Action<Style> foo, Style style)
@@ -60,12 +77,17 @@
             var colors = GetAllColors(style).ToList();
         }
 
-        private static void FetchColorsViaOg(Style style, TypeGraph<Style> typeGraph)
+        private static void FetchColorsViaTg(Style style, TypeGraph<Style> typeGraph)
         {
             var colors = typeGraph.GetDescendants<uint>().Select(x => x.Get(style)).ToList();
         }
 
-        private static void FetchColorsViaOgCached(Style style, List<ITypeDescendant<Style, uint>> descendants)
+        private static void FetchColorsViaOg(Style style, ObjectGraph<Style> objGraph)
+        {
+            var colors = objGraph.GetDescendants<uint>().Select(x => x.Value).ToList();
+        }
+
+        private static void FetchColorsViaTgCached(Style style, List<ITypeDescendant<Style, uint>> descendants)
         {
             var colors = descendants.Select(x => x.Get(style)).ToList();
         }
@@ -103,7 +125,7 @@
                     stack.Push(v);
                 }
             }
-        } 
+        }
 
         private static IEnumerable<Tuple<uint, string>> GetAllColors(Style style, string p = "x => x")
         {
@@ -113,6 +135,11 @@
             }
 
             foreach (var c in GetAllColors(style.Toolbar, p + ".Toolbar"))
+            {
+                yield return c;
+            }
+
+            foreach (var c in GetAllColors(style.Info, p + ".Info"))
             {
                 yield return c;
             }
@@ -143,6 +170,42 @@
             foreach (var c in GetAllColors(toolbar.WindowLabel, p + ".WindowLabel"))
             {
                 yield return c;
+            }
+        }
+
+        private static IEnumerable<Tuple<uint, string>> GetAllColors(StyleInfo info, string p)
+        {
+            if (info == null)
+            {
+                yield break;
+            }
+
+            foreach (var c in GetAllColors(info.Author, p))
+            {
+                yield return c;
+            }
+
+            foreach (var c in GetAllColors(info.Comments, p))
+            {
+                yield return c;
+            }
+
+            foreach (var c in GetAllColors(info.Date, p))
+            {
+                yield return c;
+            }
+
+            foreach (var c in GetAllColors(info.Name, p))
+            {
+                yield return c;
+            }
+        }
+
+        private static IEnumerable<Tuple<uint, string>> GetAllColors(string s, string p)
+        {
+            if (s == null)
+            {
+                yield break;
             }
         }
 

@@ -5,7 +5,7 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{4A47C7F5-2E8A-4A75-BEE3-F4B99BC75E15}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Inflection</RootNamespace>
     <AssemblyName>Inflection</AssemblyName>
@@ -45,27 +45,32 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Immutable\Maybe.cs" />
-    <Compile Include="ObjectGraph\IObjectDescendant.cs" />
-    <Compile Include="ObjectGraph\IObjectGraph.cs" />
-    <Compile Include="ObjectGraph\Nodes\ObjectDescendant.cs" />
-    <Compile Include="ObjectGraph\Nodes\ObjectGraph.cs" />
-    <Compile Include="OpenGraph\ITypeDescendant.cs" />
-    <Compile Include="OpenGraph\ITypeGraph.cs" />
-    <Compile Include="OpenGraph\Nodes\TypeDescendant.cs" />
-    <Compile Include="OpenGraph\Nodes\TypeGraph.cs" />
-    <Compile Include="OpenGraph\Visitors\ChildFinder.cs" />
-    <Compile Include="OpenGraph\Visitors\TypeDescendantBuilder.cs" />
-    <Compile Include="OpenGraph\Visitors\IGraphNodeChildrenVisitor.cs" />
-    <Compile Include="Immutable\Descriptors\PropertyDescriptor.cs" />
-    <Compile Include="Immutable\Descriptors\TypeDescriptor.cs" />
-    <Compile Include="Immutable\IPropertyDescriptor.cs" />
-    <Compile Include="Immutable\IPropertyDescriptorVisitor.cs" />
-    <Compile Include="Immutable\ITypeDescriptor.cs" />
-    <Compile Include="Inflection\IInflector.cs" />
-    <Compile Include="Inflection\InflectorBase.cs" />
-    <Compile Include="Inflection\ReflectingMutableTypeInflector.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="Immutable\Extensions\ImmutableDictionaryExtensions.cs" />
+    <Compile Include="Immutable\Graph\Visitors\ITypeDescendantVisitor.cs" />
+    <Compile Include="Immutable\Graph\Visitors\GetObjectDescendantVisitor.cs" />
+    <Compile Include="Immutable\Graph\Visitors\ChildExtractionVisitor.cs" />
+    <Compile Include="Immutable\Monads\Maybe.cs" />
+    <Compile Include="Immutable\Graph\IObjectDescendant.cs" />
+    <Compile Include="Immutable\Graph\IObjectGraph.cs" />
+    <Compile Include="Immutable\Graph\Nodes\ObjectDescendant.cs" />
+    <Compile Include="Immutable\Graph\ObjectGraph.cs" />
+    <Compile Include="Immutable\Graph\ITypeDescendant.cs" />
+    <Compile Include="Immutable\Graph\ITypeGraph.cs" />
+    <Compile Include="Immutable\Graph\Nodes\TypeDescendant.cs" />
+    <Compile Include="Immutable\Graph\TypeGraph.cs" />
+    <Compile Include="Immutable\Graph\Visitors\ChildFinderVisitor.cs" />
+    <Compile Include="Immutable\Graph\Visitors\TypeDescendantBuilder.cs" />
+    <Compile Include="Immutable\Graph\Visitors\ITypeDescendantChildrenVisitor.cs" />
+    <Compile Include="Immutable\TypeSystem\Visitors\IImmutableTypePropertiesVisitor.cs" />
+    <Compile Include="Immutable\TypeSystem\Visitors\IImmutableTypeVisitor.cs" />
+    <Compile Include="Immutable\TypeSystem\ImmutableProperty.cs" />
+    <Compile Include="Immutable\TypeSystem\ImmutableType.cs" />
+    <Compile Include="Immutable\TypeSystem\IImmutableProperty.cs" />
+    <Compile Include="Immutable\TypeSystem\Visitors\IImmutablePropertyVisitor.cs" />
+    <Compile Include="Immutable\TypeSystem\IImmutableType.cs" />
+    <Compile Include="IInflector.cs" />
+    <Compile Include="InflectorBase.cs" />
+    <Compile Include="ReflectingMutableTypeInflector.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

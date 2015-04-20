@@ -1,29 +1,33 @@
-﻿namespace Inflection.Immutable.Descriptors
+﻿namespace Inflection.Immutable.TypeSystem
 {
     using System;
     using System.Linq.Expressions;
     using System.Reflection;
 
-    public class PropertyDescriptor<TDeclaring, TProperty> : IPropertyDescriptor<TDeclaring, TProperty>
+    using Monads;
+
+    using Visitors;
+
+    public class ImmutableProperty<TDeclaring, TProperty> : IImmutableProperty<TDeclaring, TProperty>
     {
         private readonly MemberInfo clrMember;
         private readonly bool canRead;
         private readonly bool canWrite;
-        private readonly Lazy<ITypeDescriptor<TDeclaring>> declaringType;
-        private readonly Lazy<ITypeDescriptor<TProperty>> propertyType;
+        private readonly Lazy<IImmutableType<TDeclaring>> declaringType;
+        private readonly Lazy<IImmutableType<TProperty>> propertyType;
         private readonly Func<TDeclaring, TProperty> get;
-        private readonly Func<TDeclaring, TProperty, TDeclaring> set;
+        private readonly IMaybe<Func<TDeclaring, TProperty, TDeclaring>> set;
         private readonly Expression<Func<TDeclaring, TProperty>> getExpression;
-        private readonly Expression<Func<TDeclaring, TProperty, TDeclaring>> setExpression;
+        private readonly IMaybe<Expression<Func<TDeclaring, TProperty, TDeclaring>>> setExpression;
 
-        public PropertyDescriptor(
+        public ImmutableProperty(
             MemberInfo memberInfo,
-            Lazy<ITypeDescriptor<TDeclaring>> declaringType,
-            Lazy<ITypeDescriptor<TProperty>> propertyType,
+            Lazy<IImmutableType<TDeclaring>> declaringType,
+            Lazy<IImmutableType<TProperty>> propertyType,
             Func<TDeclaring, TProperty> get,
-            Func<TDeclaring, TProperty, TDeclaring> set, 
+            IMaybe<Func<TDeclaring, TProperty, TDeclaring>> set, 
             Expression<Func<TDeclaring, TProperty>> getExpression, 
-            Expression<Func<TDeclaring, TProperty, TDeclaring>> setExpression)
+            IMaybe<Expression<Func<TDeclaring, TProperty, TDeclaring>>> setExpression)
         {
             this.clrMember = memberInfo;
 
@@ -45,12 +49,12 @@
             get { return this.clrMember; }
         }
 
-        ITypeDescriptor IPropertyDescriptor.DeclaringType
+        IImmutableType IImmutableProperty.DeclaringType
         {
             get { return this.declaringType.Value; }
         }
 
-        ITypeDescriptor IPropertyDescriptor.PropertyType
+        IImmutableType IImmutableProperty.PropertyType
         {
             get { return this.propertyType.Value; }
         }
@@ -65,12 +69,12 @@
             get { return this.canWrite; }
         }
 
-        public ITypeDescriptor<TDeclaring> DeclaringType
+        public IImmutableType<TDeclaring> DeclaringType
         {
             get { return this.declaringType.Value; }
         }
 
-        public ITypeDescriptor<TProperty> PropertyType
+        public IImmutableType<TProperty> PropertyType
         {
             get { return this.propertyType.Value; }
         }
@@ -80,12 +84,12 @@
             get { return this.get; }
         }
 
-        public Func<TDeclaring, TProperty, TDeclaring> Set
+        public IMaybe<Func<TDeclaring, TProperty, TDeclaring>> Set
         {
             get { return this.set; }
         }
 
-        Expression IPropertyDescriptor.GetExpression
+        Expression IImmutableProperty.GetExpression
         {
             get { return this.getExpression; }
         }
@@ -95,17 +99,22 @@
             get { return this.getExpression; }
         }
 
-        Expression IPropertyDescriptor.SetExpression
+        IMaybe<Expression> IImmutableProperty.SetExpression
         {
             get { return this.setExpression; }
         }
 
-        public Expression<Func<TDeclaring, TProperty, TDeclaring>> SetExpression
+        void IImmutableProperty.Accept(IImmutablePropertyVisitor visitor)
+        {
+            visitor.Visit(this);
+        }
+
+        public IMaybe<Expression<Func<TDeclaring, TProperty, TDeclaring>>> SetExpression
         {
             get { return this.setExpression; }
         }
 
-        public void Accept(IPropertyDescriptorVisitor<TDeclaring> visitor)
+        public void Accept(IImmutablePropertyVisitor<TDeclaring> visitor)
         {
             visitor.Visit(this);
         }

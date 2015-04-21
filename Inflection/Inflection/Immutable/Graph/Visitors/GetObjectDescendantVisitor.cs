@@ -63,7 +63,7 @@ namespace Inflection.Immutable.Graph.Visitors
 
             var visitor = new FindPropertyVisitor<TNode>();
             return visitor.MaybeFindChild(type, mem)
-                          .Apply(
+                          .Bind(
                                  x =>
                                  {
                                      x.Accept(this);

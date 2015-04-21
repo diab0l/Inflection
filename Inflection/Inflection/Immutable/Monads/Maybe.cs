@@ -2,47 +2,45 @@
 {
     using System;
 
+#pragma warning disable 183 // "The expression is always of the provided type, consider comparing with 'null' instead."
+                            // Justification: Abusing the is-operator's semantics is definitely better than 
+                            //                possibly comparing a value type with 'null'.
+                            //                The is-operator is always true for value typed values and false for reference
+                            //                typed values which are null.
     public static class Maybe
     {
-#pragma warning disable 183
-        public static IMaybe<T> Return<T>(T value)
+        public static IMaybe<TA> Return<TA>(TA value)
         {
-            if (value is T)
+            if (value is TA)
             {
-                return new Just<T>(value);
+                return new Just<TA>(value);
             }
 
-            return new Nothing<T>();
-        }
-#pragma warning restore 183
-
-        public static IMaybe<T> Bind<T>(this IMaybe<T> @this, Func<T, IMaybe<T>> op)
-        {
-            return @this.Apply(op);
+            return new Nothing<TA>();
         }
 
-        public static IMaybe<T2> Apply<T, T2>(this IMaybe<T> @this, Func<T, IMaybe<T2>> op)
+        public static IMaybe<TB> Bind<TA, TB>(this IMaybe<TA> ma, Func<TA, IMaybe<TB>> f)
         {
-            if (@this == null)
+            if (ma == null)
             {
                 throw new ArgumentNullException();
             }
 
-            return !@this.IsEmpty
-                ? op(((Just<T>)@this).Value)
-                : new Nothing<T2>();
+            return !ma.IsEmpty
+                ? f(((Just<TA>)ma).Value)
+                : new Nothing<TB>();
         }
 
-        public static IMaybe<T2> Transform<T, T2>(this IMaybe<T> @this, Func<T, T2> op)
+        public static IMaybe<TB> FMap<TA, TB>(this IMaybe<TA> ma, Func<TA, TB> f)
         {
-            if (@this == null)
+            if (ma == null)
             {
                 throw new ArgumentNullException();
             }
 
-            return !@this.IsEmpty
-                ? (IMaybe<T2>)new Just<T2>(op(((Just<T>)@this).Value))
-                : new Nothing<T2>();
+            return !ma.IsEmpty
+                ? (IMaybe<TB>)new Just<TB>(f(((Just<TA>)ma).Value))
+                : new Nothing<TB>();
         }
 
         public static T GetValueOrDefault<T>(this IMaybe<T> @this)
@@ -86,3 +84,4 @@
         }
     }
 }
+#pragma warning restore 183

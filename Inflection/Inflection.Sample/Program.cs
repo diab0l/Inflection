@@ -54,7 +54,7 @@
 
         private static void InitializeMutable<T>(TypeGraph<Style> graphRoot, Style style, Func<T> value)
         {
-            graphRoot.GetDescendants<T>().Aggregate(Maybe.Return(style), (mx, y) => mx.Bind(x => y.Set.Transform(z => z(x, value()))));
+            graphRoot.GetDescendants<T>().Aggregate(Maybe.Return(style), (mx, y) => mx.Bind(x => y.Set.FMap(z => z(x, value()))));
         }
 
         private static void Test(string name, Action<Style> foo, Style style)

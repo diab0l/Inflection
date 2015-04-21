@@ -42,7 +42,7 @@
             IImmutableProperty<TParentNode, TNode> property,
             TNode value)
         {
-            var set = parent.Set.Apply(x => property.Set.Transform(y => new Func<TNode, TRoot>(tn => x(y(parent.Value, tn)))));
+            var set = parent.Set.Bind(x => property.Set.FMap(y => new Func<TNode, TRoot>(tn => x(y(parent.Value, tn)))));
 
             return new ObjectDescendant<TRoot, TNode>(Maybe.Return(parent), Maybe.Return(property), property.PropertyType, set, value);
         }
@@ -82,7 +82,7 @@
             var visitor = new GetObjectDescendantVisitor<TRoot, TNode>(this);
 
             return visitor.MaybeGetDescendant(ImmutableQueue.CreateRange(path))
-                          .Apply(x => Maybe.Return(x as IObjectDescendant<TRoot, TDescendant>));
+                          .Bind(x => Maybe.Return(x as IObjectDescendant<TRoot, TDescendant>));
         }
 
         public IEnumerable<IObjectDescendant<TRoot, TDescendant>> GetDescendants<TDescendant>()

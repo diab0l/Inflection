@@ -78,7 +78,7 @@
             }
 
             var getCompiled = get.Compile();
-            var setCompiled = set.Apply(x => Maybe.Return(x.Compile()));
+            var setCompiled = set.Bind(x => Maybe.Return(x.Compile()));
 
             return new ImmutableProperty<TDeclaring, TProperty>(prop, declaringType, propertyType, getCompiled, setCompiled, get, set);
         }

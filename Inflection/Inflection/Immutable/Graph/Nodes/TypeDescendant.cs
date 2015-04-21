@@ -26,7 +26,7 @@ namespace Inflection.Immutable.Graph.Nodes
             Func<TRoot, TNode> get = x => property.Get(parent.Get(x));
 
             var set = parent.Set
-                            .Apply(x => MergeSet(x, parent.Get, property.Set));
+                            .Bind(x => MergeSet(x, parent.Get, property.Set));
             
             var getExpr = MergeGetExpressions(parent.GetExpression, property.GetExpression);
             var setExpr = MergeSetExpressions(parent.GetExpression, parent.SetExpression, property.SetExpression);
@@ -347,10 +347,10 @@ namespace Inflection.Immutable.Graph.Nodes
             var visitor = new ChildFinderVisitor<TRoot>();
             while (!descendant.IsEmpty && members.MoveNext())
             {
-                descendant = descendant.Apply(x => visitor.MaybeGetChild(x, members.Current));
+                descendant = descendant.Bind(x => visitor.MaybeGetChild(x, members.Current));
             }
 
-            return descendant.Apply(x => Maybe.Return(x as ITypeDescendant<TRoot, T>));
+            return descendant.Bind(x => Maybe.Return(x as ITypeDescendant<TRoot, T>));
         }
         
         protected IEnumerable<KeyValuePair<MemberInfo, ITypeDescendant<TRoot>>> CreateChildren(IEnumerable<IImmutableProperty<TNode>> props)

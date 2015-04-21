@@ -64,7 +64,7 @@
 
             return this.Properties
                        .MaybeGetValue(prop)
-                       .Apply(x => Maybe.Return(x as IImmutableProperty<TDeclaring, TChild>));
+                       .Bind(x => Maybe.Return(x as IImmutableProperty<TDeclaring, TChild>));
         }
 
         public IEnumerable<IImmutableProperty<TDeclaring>> GetProperties()

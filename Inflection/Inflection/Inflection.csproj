@@ -45,7 +45,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Immutable\Extensions\ExpressionExtensions.cs" />
     <Compile Include="Immutable\Extensions\ImmutableDictionaryExtensions.cs" />
+    <Compile Include="Immutable\Graph\Visitors\ObjectDescendantBuilderVisitor.cs" />
     <Compile Include="Immutable\Graph\Visitors\ITypeDescendantVisitor.cs" />
     <Compile Include="Immutable\Graph\Visitors\GetObjectDescendantVisitor.cs" />
     <Compile Include="Immutable\Graph\Visitors\ChildExtractionVisitor.cs" />
@@ -59,7 +61,7 @@
     <Compile Include="Immutable\Graph\Nodes\TypeDescendant.cs" />
     <Compile Include="Immutable\Graph\TypeGraph.cs" />
     <Compile Include="Immutable\Graph\Visitors\ChildFinderVisitor.cs" />
-    <Compile Include="Immutable\Graph\Visitors\TypeDescendantBuilder.cs" />
+    <Compile Include="Immutable\Graph\Visitors\TypeDescendantBuilderVisitor.cs" />
     <Compile Include="Immutable\Graph\Visitors\ITypeDescendantChildrenVisitor.cs" />
     <Compile Include="Immutable\TypeSystem\Visitors\IImmutableTypePropertiesVisitor.cs" />
     <Compile Include="Immutable\TypeSystem\Visitors\IImmutableTypeVisitor.cs" />

@@ -31,21 +31,17 @@ namespace Inflection.Immutable.Graph.Visitors
         {
             var value = prop.Get(this.parent.Value);
 
-            if (!(value is TProperty))
-            {
-                return;
-            }
-
             var child = ObjectDescendant<TRoot, TProperty>.Create(this.parent, prop, value);
 
-            if (this.members.IsEmpty)
+            if (this.members.IsEmpty || !(value is TProperty))
             {
                 this.child = Maybe.Return<IObjectDescendant<TRoot>>(child);
                 return;
             }
 
             var foo = new GetObjectDescendantVisitor<TRoot, TProperty>(child);
-            this.child = foo.MaybeGetDescendant(this.members.Dequeue());
+
+            this.child = foo.MaybeGetDescendant(this.members);
         }
 #pragma warning restore 183
 

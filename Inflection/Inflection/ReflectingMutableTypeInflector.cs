@@ -6,8 +6,6 @@
     using System.Linq.Expressions;
     using System.Reflection;
 
-    using global::Inflection.Immutable;
-
     using Immutable.Monads;
     using Immutable.TypeSystem;
 
@@ -27,9 +25,12 @@
 
             var tdLazy = new Lazy<IImmutableType<TDeclaring>>(() => desc);
 
-            var props = typeof(TDeclaring).GetProperties().Select(p => this.DescribeProperty(p, tdLazy));
+            var props = typeof(TDeclaring).GetProperties()
+                                          .Where(x => x.CanRead)
+                                          .Where(x => !x.GetIndexParameters().Any())
+                                          .Select(p => this.DescribeProperty(p, tdLazy));
 
-            desc = new ImmutableType<TDeclaring>(props);
+            desc = new ImmutableType<TDeclaring>(this, props);
 
             this.cachedDescriptors[typeof(TDeclaring)] = desc;
 

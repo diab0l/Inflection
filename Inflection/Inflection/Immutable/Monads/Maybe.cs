@@ -43,10 +43,10 @@
                 : new Nothing<TB>();
         }
 
-        public static T GetValueOrDefault<T>(this IMaybe<T> @this)
+        public static T GetValueOrDefault<T>(this IMaybe<T> @this, T @default = default(T))
         {
             return @this.IsEmpty
-                ? default(T)
+                ? @default
                 : ((Just<T>)@this).Value;
         }
     }
@@ -74,6 +74,17 @@
         {
             get { return false; }
         }
+
+        /// <summary>
+        /// Returns the fully qualified type name of this instance.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="T:System.String"/> containing a fully qualified type name.
+        /// </returns>
+        public override string ToString()
+        {
+            return string.Format("Just({0})", this.Value);
+        }
     }
 
     public struct Nothing<T> : IMaybe<T>
@@ -81,6 +92,17 @@
         public bool IsEmpty
         {
             get { return true; }
+        }
+
+        /// <summary>
+        /// Returns the fully qualified type name of this instance.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="T:System.String"/> containing a fully qualified type name.
+        /// </returns>
+        public override string ToString()
+        {
+            return "Nothing";
         }
     }
 }

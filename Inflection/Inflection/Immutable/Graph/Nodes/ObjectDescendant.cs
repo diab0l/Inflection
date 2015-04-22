@@ -7,10 +7,11 @@
     using System.Linq.Expressions;
     using System.Reflection;
 
+    using Extensions;
+
     using Monads;
 
     using TypeSystem;
-    using TypeSystem.Visitors;
 
     using Visitors;
 
@@ -22,19 +23,18 @@
 
         private readonly TNode value;
         private readonly IMaybe<Func<TNode, TRoot>> set;
-        
-        public ObjectDescendant(IMaybe<IObjectDescendant<TRoot>> parent, IMaybe<IImmutableProperty> property, IImmutableType<TNode> nodeType, IMaybe<Func<TNode, TRoot>> set, TNode value)
+
+        private readonly Expression<Func<TRoot, TNode>> getExpression;
+
+        public ObjectDescendant(IMaybe<IObjectDescendant<TRoot>> parent, IMaybe<IImmutableProperty> property, IImmutableType<TNode> nodeType, IMaybe<Func<TNode, TRoot>> set, TNode value, Expression<Func<TRoot, TNode>> getExpression)
         {
             this.parent = parent;
             this.property = property;
             this.nodeType = nodeType;
             this.value = value;
+            this.getExpression = getExpression;
 
             this.set = set;
-
-            //this.set = this.TypeDescendant
-            //               .Set
-            //               .Apply(this.MaybeSet);
         }
 
         public static ObjectDescendant<TRoot, TNode> Create<TParentNode>(
@@ -44,11 +44,31 @@
         {
             var set = parent.Set.Bind(x => property.Set.FMap(y => new Func<TNode, TRoot>(tn => x(y(parent.Value, tn)))));
 
-            return new ObjectDescendant<TRoot, TNode>(Maybe.Return(parent), Maybe.Return(property), property.PropertyType, set, value);
+            var parentGet = parent.GetExpression;
+            var propertyGet = property.GetExpression;
+
+            var getExpr = Expression.Lambda<Func<TRoot, TNode>>(propertyGet.Body.Replace(propertyGet.Parameters[0], parentGet.Body), parentGet.Parameters);
+
+            return new ObjectDescendant<TRoot, TNode>(Maybe.Return(parent), Maybe.Return(property), property.PropertyType, set, value, getExpr);
         }
 
         public IImmutableType<TNode> NodeType {
             get { return this.nodeType; }
+        }
+
+        public IMaybe<IObjectDescendant<TRoot>> Parent
+        {
+            get { return this.parent; }
+        }
+
+        public IMaybe<IImmutableProperty> Property
+        {
+            get { return this.property; }
+        }
+
+        IMaybe<IObjectDescendant> IObjectDescendant.Parent
+        {
+            get { return this.parent; }
         }
 
         IImmutableType IObjectDescendant.NodeType
@@ -59,6 +79,11 @@
         public TNode Value
         {
             get { return this.value; }
+        }
+
+        public Expression<Func<TRoot, TNode>> GetExpression
+        {
+            get { return this.getExpression; }
         }
 
         public IMaybe<Func<TNode, TRoot>> Set { get { return this.set; } }
@@ -87,7 +112,7 @@
 
         public IEnumerable<IObjectDescendant<TRoot, TDescendant>> GetDescendants<TDescendant>()
         {
-            var childrenBuilder = new ChildrenBuilderVisitor<TRoot, TNode>();
+            var childrenBuilder = new ObjectDescendantBuilderVisitor<TRoot, TNode>();
 
             var childProps = this.NodeType.GetProperties();
 
@@ -112,11 +137,11 @@
             }
         }
 
-        public ITypeDescendant<TRoot, TNode> Open()
+        public IMaybe<ITypeDescendant<TRoot, TNode>> Open()
         {
-            // TODO: use the parents, properties and a visitor to construct the type descendant
+            var tg = TypeGraph.Create<TRoot>(this.NodeType.Inflector);
 
-            throw new NotImplementedException();
+            return tg.GetDescendant(this.getExpression);
         }
 
         protected static IEnumerable<MemberInfo> Unroll<T1, T2>(Expression<Func<T1, T2>> expr)
@@ -129,36 +154,6 @@
 
                 body = body.Expression as MemberExpression;
             }
-        }
-    }
-
-    public class ChildrenBuilderVisitor<TRoot, TDeclaring> : IImmutablePropertyVisitor<TDeclaring>
-    {
-        private IObjectDescendant<TRoot, TDeclaring> parent;
-
-        private IObjectDescendant<TRoot> descendant;
-
-#pragma warning disable 183
-        public void Visit<TProperty>(IImmutableProperty<TDeclaring, TProperty> prop)
-        {
-            var value = prop.Get(this.parent.Value);
-
-            if (!(value is TProperty))
-            {
-                return;
-            }
-
-            this.descendant = ObjectDescendant<TRoot, TProperty>.Create(this.parent, prop, value);
-        }
-#pragma warning restore 183
-
-        public IObjectDescendant<TRoot> GetChild(IObjectDescendant<TRoot, TDeclaring> parent, IImmutableProperty<TDeclaring> property)
-        {
-            this.parent = parent;
-
-            this.descendant = null;
-            property.Accept(this);
-            return this.descendant;
         }
     }
 }

@@ -56,5 +56,7 @@ namespace Inflection.Immutable.Graph
         IEnumerable<ITypeDescendant<TRoot, T>> GetChildren<T>();
 
         IMaybe<ITypeDescendant<TRoot, T>> GetDescendant<T>(Expression<Func<TNode, T>> propertyExpr);
+
+        IMaybe<IObjectDescendant<TRoot, TNode>> Close(TRoot value);
     }
 }

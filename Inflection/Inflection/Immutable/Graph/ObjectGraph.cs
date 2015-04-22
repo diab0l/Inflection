@@ -12,17 +12,20 @@
     {
         public static ObjectGraph<TRoot> Create<TRoot>(IInflector inflector, TRoot value)
         {
-            var typeRoot = TypeGraph.Create<TRoot>(inflector);
-
-            return new ObjectGraph<TRoot>(typeRoot, value);
+            return new ObjectGraph<TRoot>(inflector, value);
         }
     }
 
     public class ObjectGraph<TRoot> : ObjectDescendant<TRoot, TRoot>, IObjectGraph<TRoot>
     {
-        public ObjectGraph(ITypeDescendant<TRoot, TRoot> typeDescendant, TRoot value) 
-            : base(new Nothing<IObjectDescendant<TRoot>>(), new Nothing<IImmutableProperty>(), typeDescendant.NodeType, Maybe.Return<Func<TRoot, TRoot>>(x => x), value)
+        public ObjectGraph(IInflector inflector, TRoot value) 
+            : base(new Nothing<IObjectDescendant<TRoot>>(), new Nothing<IImmutableProperty>(), inflector.Inflect<TRoot>(), Maybe.Return<Func<TRoot, TRoot>>(x => x), value, x => x)
         {
+        }
+
+        public new ITypeGraph<TRoot> Open()
+        {
+            return TypeGraph.Create<TRoot>(this.NodeType.Inflector);
         }
     }
 }

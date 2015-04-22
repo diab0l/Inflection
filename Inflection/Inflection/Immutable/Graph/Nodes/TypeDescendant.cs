@@ -6,7 +6,6 @@ namespace Inflection.Immutable.Graph.Nodes
     using System.Linq;
     using System.Linq.Expressions;
     using System.Reflection;
-    using System.Runtime.Remoting.Messaging;
 
     using Extensions;
 
@@ -31,11 +30,9 @@ namespace Inflection.Immutable.Graph.Nodes
             var getExpr = MergeGetExpressions(parent.GetExpression, property.GetExpression);
             var setExpr = MergeSetExpressions(parent.GetExpression, parent.SetExpression, property.SetExpression);
 
-            return new TypeDescendant<TRoot, TNode>(rootType, property.PropertyType, get, set, getExpr, setExpr, property.PropertyType.GetProperties());
+            return new TypeDescendant<TRoot, TNode>(rootType, property.PropertyType, get, set, getExpr, setExpr);
         }
-
-
-
+        
         private static IMaybe<Func<TRoot, TNode, TRoot>> MergeSet<TRoot, TParent, TNode>(Func<TRoot, TParent, TRoot> parentSet, Func<TRoot, TParent> parentGet, IMaybe<Func<TParent, TNode, TParent>> maybePropertySet)
         {
             var propertySet = maybePropertySet.GetValueOrDefault();
@@ -66,7 +63,7 @@ namespace Inflection.Immutable.Graph.Nodes
             var x = parentGet.Parameters[0];
             var y = nodeGet.Parameters[0];
 
-            var body = Replace(nodeGet.Body, y, parentGet.Body);
+            var body = nodeGet.Body.Replace(y, parentGet.Body);
             
             var get = Expression.Lambda<Func<TRoot, TNode>>(body, x);
 
@@ -101,68 +98,13 @@ namespace Inflection.Immutable.Graph.Nodes
 
             var g = parentGet.Parameters[0];
             
-            var getParent = Replace(parentGet.Body, g, r);
-            var rootedNodeSet = Replace(nodeSet.Body, p, getParent);
-            var body = Replace(parentSet.Body, y, rootedNodeSet);
+            var getParent = parentGet.Body.Replace(g, r);
+            var rootedNodeSet = nodeSet.Body.Replace(p, getParent);
+            var body = parentSet.Body.Replace(y, rootedNodeSet);
 
             var set = Expression.Lambda<Func<TRoot, TNode, TRoot>>(body, r, z);
 
             return Maybe.Return(set);
-        }
-
-        private static Expression Replace(Expression @in, Expression old, Expression @new)
-        {
-            if (@in == old)
-            {
-                return @new;
-            }
-
-            if (@in is MemberExpression)
-            {
-                var mExpr = @in as MemberExpression;
-
-                var expr = Replace(mExpr.Expression, old, @new);
-                var member = mExpr.Member;
-
-                return Expression.MakeMemberAccess(expr, member);
-            }
-           
-            if (@in is BlockExpression)
-            {
-                var bExpr = @in as BlockExpression;
-
-                var exprs = bExpr.Expressions.Select(x => Replace(x, old, @new));
-
-                return Expression.Block(exprs);
-            }
-
-            if (@in is UnaryExpression)
-            {
-                var uExpr = @in as UnaryExpression;
-
-                var op = Replace(uExpr.Operand, old, @new);
-
-                return Expression.MakeUnary(uExpr.NodeType, op, uExpr.Type);
-            }
-
-            if (@in is BinaryExpression)
-            {
-                var bExpr = @in as BinaryExpression;
-                var left = Replace(bExpr.Left, old, @new);
-                var right = Replace(bExpr.Right, old, @new);
-
-                return Expression.MakeBinary(bExpr.NodeType, left, right, bExpr.IsLiftedToNull, bExpr.Method, bExpr.Conversion);
-            }
-
-            if (@in is LabelExpression)
-            {
-                var lExpr = @in as LabelExpression;
-                var dValue = Replace(lExpr.DefaultValue, old, @new);
-
-                return Expression.Label(lExpr.Target, dValue);
-            }
-
-            return @in;
         }
     }
 
@@ -185,8 +127,7 @@ namespace Inflection.Immutable.Graph.Nodes
             Func<TRoot, TNode> get,
             IMaybe<Func<TRoot, TNode, TRoot>> set,
             Expression<Func<TRoot, TNode>> getExpression,
-            IMaybe<Expression<Func<TRoot, TNode, TRoot>>> setExpression,
-            IEnumerable<IImmutableProperty<TNode>> children)
+            IMaybe<Expression<Func<TRoot, TNode, TRoot>>> setExpression)
         {
             this.nodeType = nodeType;
             this.rootType = rootType;
@@ -195,7 +136,7 @@ namespace Inflection.Immutable.Graph.Nodes
             this.getExpression = getExpression;
             this.setExpression = setExpression;
 
-            this.children = new Lazy<ImmutableDictionary<MemberInfo, ITypeDescendant<TRoot>>>(() => ImmutableDictionary.CreateRange(this.CreateChildren(children)));
+            this.children = new Lazy<ImmutableDictionary<MemberInfo, ITypeDescendant<TRoot>>>(() => ImmutableDictionary.CreateRange(this.CreateChildren(nodeType.GetProperties())));
         }
 
         IImmutableType ITypeDescendant.RootType
@@ -295,6 +236,13 @@ namespace Inflection.Immutable.Graph.Nodes
             return this.GetDescendant<T>(members);
         }
 
+        public IMaybe<IObjectDescendant<TRoot, TNode>> Close(TRoot value)
+        {
+            var og = ObjectGraph.Create(null, value);
+
+            return og.GetDescendant(this.GetExpression);
+        }
+
         public IEnumerable<ITypeDescendant<TRoot, TDescendant>> GetDescendants<TDescendant>()
         {
             return GetDescendantsInternal<TDescendant>(this, ImmutableHashSet.Create<IImmutableType>());
@@ -355,7 +303,7 @@ namespace Inflection.Immutable.Graph.Nodes
         
         protected IEnumerable<KeyValuePair<MemberInfo, ITypeDescendant<TRoot>>> CreateChildren(IEnumerable<IImmutableProperty<TNode>> props)
         {
-            var builder = new TypeDescendantBuilder<TRoot, TNode>();
+            var builder = new TypeDescendantBuilderVisitor<TRoot, TNode>();
 
             foreach (var p in props)
             {

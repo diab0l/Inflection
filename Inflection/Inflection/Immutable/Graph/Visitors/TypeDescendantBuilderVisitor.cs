@@ -5,7 +5,7 @@ namespace Inflection.Immutable.Graph.Visitors
     using TypeSystem;
     using TypeSystem.Visitors;
 
-    public class TypeDescendantBuilder<TRoot, TNode> : IImmutablePropertyVisitor<TNode>
+    public class TypeDescendantBuilderVisitor<TRoot, TNode> : IImmutablePropertyVisitor<TNode>
     {
         private ITypeDescendant<TRoot, TNode> parent;
 
@@ -22,7 +22,6 @@ namespace Inflection.Immutable.Graph.Visitors
 
             this.typeDescendant = null;
             prop.Accept(this);
-
             return this.typeDescendant;
         }
     }

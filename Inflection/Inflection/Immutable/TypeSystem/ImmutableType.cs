@@ -15,12 +15,20 @@
 
     public class ImmutableType<TDeclaring> : IImmutableType<TDeclaring>
     {
+        private readonly IInflector inflector;
+
         private readonly Lazy<ImmutableDictionary<MemberInfo, IImmutableProperty<TDeclaring>>> properties;
 
-        public ImmutableType(IEnumerable<IImmutableProperty<TDeclaring>> properties)
+        public ImmutableType(IInflector inflector, IEnumerable<IImmutableProperty<TDeclaring>> properties)
         {
+            this.inflector = inflector;
             this.properties = new Lazy<ImmutableDictionary<MemberInfo, IImmutableProperty<TDeclaring>>>(
                 () => properties.ToImmutableDictionary(x => x.ClrMember));
+        }
+
+        public IInflector Inflector
+        {
+            get { return this.inflector; }
         }
 
         public Type ClrType

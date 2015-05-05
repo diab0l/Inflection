@@ -5,11 +5,14 @@ namespace Inflection.Immutable.Graph.Nodes
     using System.Collections.Immutable;
     using System.Linq;
     using System.Linq.Expressions;
+    using System.Net.Configuration;
     using System.Reflection;
 
     using Extensions;
 
     using Monads;
+
+    using Strategies;
 
     using TypeSystem;
 
@@ -22,17 +25,22 @@ namespace Inflection.Immutable.Graph.Nodes
             IImmutableProperty<TParent, TNode> property)
         {
             var rootType = parent.RootType;
-            Func<TRoot, TNode> get = x => property.Get(parent.Get(x));
+            var get = typeof(TParent).IsValueType ?
+                new Func<TRoot, TNode>(x => property.Get(parent.Get(x))) :
+                (x =>
+                {
+                    var y = parent.Get(x);
 
-            var set = parent.Set
-                            .Bind(x => MergeSet(x, parent.Get, property.Set));
-            
-            var getExpr = MergeGetExpressions(parent.GetExpression, property.GetExpression);
-            var setExpr = MergeSetExpressions(parent.GetExpression, parent.SetExpression, property.SetExpression);
+                    return y == null ? default(TNode) : property.Get(y);
+                });
+            var set = parent.Set.Bind(x => MergeSet(x, parent.Get, property.Set));
 
-            return new TypeDescendant<TRoot, TNode>(rootType, property.PropertyType, get, set, getExpr, setExpr);
+            var lazyGetExpr = new Lazy<Expression<Func<TRoot, TNode>>>(() => MergeGetExpressions(parent.GetExpression, property.GetExpression));
+            var lazySetExpr = new Lazy<IMaybe<Expression<Func<TRoot, TNode, TRoot>>>>(() => MergeSetExpressions(parent.GetExpression, parent.SetExpression, property.SetExpression));
+
+            return new TypeDescendant<TRoot, TNode>(parent.IsMemoizing, rootType, property.PropertyType, get, set, lazyGetExpr, lazySetExpr);
         }
-        
+
         private static IMaybe<Func<TRoot, TNode, TRoot>> MergeSet<TRoot, TParent, TNode>(Func<TRoot, TParent, TRoot> parentSet, Func<TRoot, TParent> parentGet, IMaybe<Func<TParent, TNode, TParent>> maybePropertySet)
         {
             var propertySet = maybePropertySet.GetValueOrDefault();
@@ -46,7 +54,7 @@ namespace Inflection.Immutable.Graph.Nodes
         }
 
         private static Expression<Func<TRoot, TNode>> MergeGetExpressions<TRoot, TParent, TNode>(
-            Expression<Func<TRoot, TParent>> parentGet, 
+            Expression<Func<TRoot, TParent>> parentGet,
             Expression<Func<TParent, TNode>> nodeGet)
         {
             if (parentGet == null || nodeGet == null)
@@ -64,7 +72,7 @@ namespace Inflection.Immutable.Graph.Nodes
             var y = nodeGet.Parameters[0];
 
             var body = nodeGet.Body.Replace(y, parentGet.Body);
-            
+
             var get = Expression.Lambda<Func<TRoot, TNode>>(body, x);
 
             return get;
@@ -97,7 +105,7 @@ namespace Inflection.Immutable.Graph.Nodes
             var z = nodeSet.Parameters[1];
 
             var g = parentGet.Parameters[0];
-            
+
             var getParent = parentGet.Body.Replace(g, r);
             var rootedNodeSet = nodeSet.Body.Replace(p, getParent);
             var body = parentSet.Body.Replace(y, rootedNodeSet);
@@ -110,33 +118,46 @@ namespace Inflection.Immutable.Graph.Nodes
 
     public class TypeDescendant<TRoot, TNode> : ITypeDescendant<TRoot, TNode>
     {
+        private readonly bool isMemoizing;
+        
         private readonly IImmutableType<TNode> nodeType;
         private readonly IImmutableType<TRoot> rootType;
 
         private readonly Func<TRoot, TNode> get;
         private readonly IMaybe<Func<TRoot, TNode, TRoot>> set;
 
-        private readonly Expression<Func<TRoot, TNode>> getExpression;
-        private readonly IMaybe<Expression<Func<TRoot, TNode, TRoot>>> setExpression;
+        private readonly Lazy<Expression<Func<TRoot, TNode>>> getExpression;
+        private readonly Lazy<IMaybe<Expression<Func<TRoot, TNode, TRoot>>>> setExpression;
 
         private readonly Lazy<ImmutableDictionary<MemberInfo, ITypeDescendant<TRoot>>> children;
 
+        private readonly Dictionary<TRoot, TNode> memoizationCache = new Dictionary<TRoot, TNode>();
+        
         public TypeDescendant(
+            bool isMemoizing,
             IImmutableType<TRoot> rootType,
             IImmutableType<TNode> nodeType,
             Func<TRoot, TNode> get,
             IMaybe<Func<TRoot, TNode, TRoot>> set,
-            Expression<Func<TRoot, TNode>> getExpression,
-            IMaybe<Expression<Func<TRoot, TNode, TRoot>>> setExpression)
+            Lazy<Expression<Func<TRoot, TNode>>> getExpression,
+            Lazy<IMaybe<Expression<Func<TRoot, TNode, TRoot>>>> setExpression)
         {
+            this.isMemoizing = isMemoizing;
             this.nodeType = nodeType;
             this.rootType = rootType;
-            this.get = get;
+
+            this.get = this.isMemoizing ? this.Memoify(get) : get;
+            
             this.set = set;
             this.getExpression = getExpression;
             this.setExpression = setExpression;
 
             this.children = new Lazy<ImmutableDictionary<MemberInfo, ITypeDescendant<TRoot>>>(() => ImmutableDictionary.CreateRange(this.CreateChildren(nodeType.GetProperties())));
+        }
+
+        public bool IsMemoizing
+        {
+            get { return this.isMemoizing; }
         }
 
         IImmutableType ITypeDescendant.RootType
@@ -161,22 +182,22 @@ namespace Inflection.Immutable.Graph.Nodes
 
         Expression ITypeDescendant.GetExpression
         {
-            get { return this.getExpression; }
+            get { return this.getExpression.Value; }
         }
 
         public Expression<Func<TRoot, TNode>> GetExpression
         {
-            get { return this.getExpression; }
+            get { return this.getExpression.Value; }
         }
 
         IMaybe<Expression> ITypeDescendant.SetExpression
         {
-            get { return this.setExpression; }
+            get { return this.setExpression.Value; }
         }
 
         public IMaybe<Expression<Func<TRoot, TNode, TRoot>>> SetExpression
         {
-            get { return this.setExpression; }
+            get { return this.setExpression.Value; }
         }
 
         public Func<TRoot, TNode> Get
@@ -206,7 +227,7 @@ namespace Inflection.Immutable.Graph.Nodes
 
         public void Accept(ITypeDescendantChildrenVisitor visitor)
         {
-            visitor.Visit<TRoot, TNode>(this.Children.MaybeGetValue, this.Children.Values);
+            visitor.Visit<TRoot, TNode>(this.Children.MaybeGetValue);
         }
 
         void ITypeDescendant<TRoot>.Accept(ITypeDescendantVisitor<TRoot> visitor)
@@ -216,12 +237,24 @@ namespace Inflection.Immutable.Graph.Nodes
 
         void ITypeDescendant<TRoot>.Accept(ITypeDescendantChildrenVisitor<TRoot> visitor)
         {
-            visitor.Visit<TNode>(this.Children.MaybeGetValue, this.Children.Values);
+            visitor.Visit<TNode>(this.Children.MaybeGetValue);
         }
 
         IEnumerable<ITypeDescendant<TRoot>> ITypeDescendant<TRoot>.GetChildren()
         {
             return this.Children.Values;
+        }
+
+        public IMaybe<ITypeDescendant<TRoot, T>> GetChild<T>(Expression<Func<TNode, T>> propertyExpr)
+        {
+            var memExpr = propertyExpr.Body as MemberExpression;
+
+            if (memExpr == null)
+            {
+                return new Nothing<ITypeDescendant<TRoot, T>>();
+            }
+
+            return this.Children.MaybeGetValue(memExpr.Member).FMap(x => x as ITypeDescendant<TRoot, T>);
         }
 
         public IEnumerable<ITypeDescendant<TRoot, T>> GetChildren<T>()
@@ -245,7 +278,26 @@ namespace Inflection.Immutable.Graph.Nodes
 
         public IEnumerable<ITypeDescendant<TRoot, TDescendant>> GetDescendants<TDescendant>()
         {
-            return GetDescendantsInternal<TDescendant>(this, ImmutableHashSet.Create<IImmutableType>());
+            var seenTypes = new Dictionary<IImmutableType, int>();
+            Func<ITypeDescendant<TRoot>, IEnumerable<ITypeDescendant<TRoot>>> getChildren = x =>
+            {
+                if (seenTypes.GetValueOrDefault(x.NodeType) > 1)
+                {
+                    throw new Exception("Cyclic graph detected");
+                }
+
+                return x.GetChildren();
+            };
+
+            Action<ITypeDescendant<TRoot>> enter = x => seenTypes.AddOrUpdate(x.NodeType, 1, y => y + 1);
+            Action<ITypeDescendant<TRoot>> leave = x => seenTypes.AddOrUpdate(x.NodeType, 0, y => y - 1);
+
+            return GetDescendantsInternal<TDescendant>(this, new DescendingStrategy<TRoot>(getChildren), enter, leave);
+        }
+
+        public IEnumerable<ITypeDescendant<TRoot, TDescendant>> GetDescendants<TDescendant>(IDescendingStrategy<TRoot> descendingStrategy)
+        {
+            return GetDescendantsInternal<TDescendant>(this, descendingStrategy, null, null);
         }
 
         public override string ToString()
@@ -265,28 +317,60 @@ namespace Inflection.Immutable.Graph.Nodes
             }
         }
 
-        protected static IEnumerable<ITypeDescendant<TRoot, TDescendant>> GetDescendantsInternal<TDescendant>(ITypeDescendant<TRoot> typeDescendant, IImmutableSet<IImmutableType> seenTypes)
+        protected static IEnumerable<ITypeDescendant<TRoot, TDescendant>> GetDescendantsInternal<TDescendant>(
+            ITypeDescendant<TRoot> typeDescendant,
+            IDescendingStrategy<TRoot> descendingStrategy,
+            Action<ITypeDescendant<TRoot>> enter,
+            Action<ITypeDescendant<TRoot>> leave)
         {
-            if (seenTypes.Contains(typeDescendant.NodeType))
+            if (enter != null)
             {
-                throw new Exception("Cyclic graph detected");
+                enter(typeDescendant);
             }
 
-            var foo = new ChildExtractionVisitor<TRoot>();
-
-            foreach (var c in foo.GetChildren(typeDescendant))
+            try
             {
-                if (c is ITypeDescendant<TRoot, TDescendant>)
+                foreach (var c in descendingStrategy.GetChildren(typeDescendant))
                 {
-                    yield return (ITypeDescendant<TRoot, TDescendant>)c;
-                }
+                    if (c is ITypeDescendant<TRoot, TDescendant>)
+                    {
+                        yield return (ITypeDescendant<TRoot, TDescendant>)c;
+                    }
 
-                foreach (var d in GetDescendantsInternal<TDescendant>(c, seenTypes.Add(typeDescendant.NodeType)))
+                    foreach (var d in GetDescendantsInternal<TDescendant>(c, descendingStrategy, enter, leave))
+                    {
+                        yield return d;
+                    }
+                }
+            } finally
+            {
+                if (leave != null)
                 {
-                    yield return d;
+                    leave(typeDescendant);
                 }
             }
         }
+
+        protected Func<TRoot, TNode> Memoify(Func<TRoot, TNode> get)
+        {
+            return root =>
+            {
+                TNode v;
+
+                if (!this.memoizationCache.TryGetValue(root, out v))
+                {
+                    v = get(root);
+                    this.memoizationCache[root] = v;
+                }
+
+                if (this.memoizationCache.Count > 10)
+                {
+                    this.memoizationCache.Clear();
+                }
+
+                return v;
+            };            
+        } 
 
         protected IMaybe<ITypeDescendant<TRoot, T>> GetDescendant<T>(IEnumerator<MemberInfo> members)
         {
@@ -300,7 +384,7 @@ namespace Inflection.Immutable.Graph.Nodes
 
             return descendant.Bind(x => Maybe.Return(x as ITypeDescendant<TRoot, T>));
         }
-        
+
         protected IEnumerable<KeyValuePair<MemberInfo, ITypeDescendant<TRoot>>> CreateChildren(IEnumerable<IImmutableProperty<TNode>> props)
         {
             var builder = new TypeDescendantBuilderVisitor<TRoot, TNode>();

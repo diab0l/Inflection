@@ -1,7 +1,6 @@
 ﻿namespace Inflection.Immutable.Graph.Visitors
 {
     using System;
-    using System.Collections.Generic;
     using System.Reflection;
 
     using Monads;
@@ -21,7 +20,7 @@
             return result;
         }
 
-        public void Visit<TNode>(Func<MemberInfo, IMaybe<ITypeDescendant<TRoot>>> findChild, IEnumerable<ITypeDescendant<TRoot>> children)
+        public void Visit<TNode>(Func<MemberInfo, IMaybe<ITypeDescendant<TRoot>>> findChild)
         {
             this.child = findChild(this.member);
         }

@@ -6,12 +6,16 @@ namespace Inflection.Immutable.Graph
 
     using Monads;
 
+    using Strategies;
+
     using TypeSystem;
 
     using Visitors;
 
     public interface ITypeDescendant
     {
+        bool IsMemoizing { get; }
+
         IImmutableType RootType { get; }
 
         IImmutableType NodeType { get; }
@@ -39,6 +43,8 @@ namespace Inflection.Immutable.Graph
 
         // TODO: create a way to explicitly use DFS or BFS
         IEnumerable<ITypeDescendant<TRoot, T>> GetDescendants<T>();
+
+        IEnumerable<ITypeDescendant<TRoot, T>> GetDescendants<T>(IDescendingStrategy<TRoot> descendingStrategy);
     }
 
     public interface ITypeDescendant<TRoot, TNode> : ITypeDescendant<TRoot>
@@ -53,6 +59,8 @@ namespace Inflection.Immutable.Graph
 
         IMaybe<Func<TRoot, TNode, TRoot>> Set { get; }
 
+        IMaybe<ITypeDescendant<TRoot, T>> GetChild<T>(Expression<Func<TNode, T>> propertyExpr);
+        
         IEnumerable<ITypeDescendant<TRoot, T>> GetChildren<T>();
 
         IMaybe<ITypeDescendant<TRoot, T>> GetDescendant<T>(Expression<Func<TNode, T>> propertyExpr);

@@ -2,10 +2,7 @@ namespace Inflection.Immutable.Graph.Visitors
 {
     using System;
     using System.Collections.Immutable;
-    using System.Linq;
     using System.Reflection;
-
-    using Immutable;
 
     using Monads;
 

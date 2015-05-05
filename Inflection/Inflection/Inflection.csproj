@@ -45,12 +45,21 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Immutable\Extensions\DictionaryExtensions.cs" />
     <Compile Include="Immutable\Extensions\ExpressionExtensions.cs" />
     <Compile Include="Immutable\Extensions\ImmutableDictionaryExtensions.cs" />
+    <Compile Include="Immutable\Extensions\ObjectGraphExtensions.cs" />
+    <Compile Include="Immutable\Extensions\TypeGraphExtensions.cs" />
+    <Compile Include="Immutable\Graph\Strategies\CacheAdapter.cs" />
+    <Compile Include="Immutable\Graph\Strategies\DefaultStrategy.cs" />
+    <Compile Include="Immutable\Graph\Strategies\DfsStrategy.cs" />
+    <Compile Include="Immutable\Graph\Strategies\NotNullAdapter.cs" />
+    <Compile Include="Immutable\Graph\Strategies\DescendingStrategy.cs" />
+    <Compile Include="Immutable\Graph\Strategies\IDescendingStrategy.cs" />
+    <Compile Include="Immutable\Graph\Visitors\NullCheckVisitor.cs" />
     <Compile Include="Immutable\Graph\Visitors\ObjectDescendantBuilderVisitor.cs" />
     <Compile Include="Immutable\Graph\Visitors\ITypeDescendantVisitor.cs" />
     <Compile Include="Immutable\Graph\Visitors\GetObjectDescendantVisitor.cs" />
-    <Compile Include="Immutable\Graph\Visitors\ChildExtractionVisitor.cs" />
     <Compile Include="Immutable\Monads\Maybe.cs" />
     <Compile Include="Immutable\Graph\IObjectDescendant.cs" />
     <Compile Include="Immutable\Graph\IObjectGraph.cs" />

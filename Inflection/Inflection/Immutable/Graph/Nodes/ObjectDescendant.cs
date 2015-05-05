@@ -25,7 +25,7 @@
         private readonly IMaybe<Func<TNode, TRoot>> set;
 
         private readonly Expression<Func<TRoot, TNode>> getExpression;
-
+        
         public ObjectDescendant(IMaybe<IObjectDescendant<TRoot>> parent, IMaybe<IImmutableProperty> property, IImmutableType<TNode> nodeType, IMaybe<Func<TNode, TRoot>> set, TNode value, Expression<Func<TRoot, TNode>> getExpression)
         {
             this.parent = parent;

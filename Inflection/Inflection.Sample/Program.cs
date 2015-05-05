@@ -5,10 +5,14 @@
     using System.Diagnostics;
     using System.Linq;
     using System.Linq.Expressions;
+    using System.Reflection.Emit;
+    using System.Runtime.CompilerServices;
     using System.Xml.Schema;
 
     using Immutable;
     using Immutable.Graph;
+    using Immutable.Graph.Strategies;
+    using Immutable.Graph.Visitors;
     using Immutable.Monads;
     
     /* TODO: Write a benchmarking suite
@@ -40,32 +44,18 @@
             InitializeMutable(graphRoot, style, () => new TextStyle());
             InitializeMutable(graphRoot, style, () => (uint)0x1337BEEF);
 
+            style.Toolbar.Button = null;
+
             var og = ObjectGraph.Create(new ReflectingMutableTypeInflector(), style);
             var tg = TypeGraph.Create<Style>(new ReflectingMutableTypeInflector());
 
-            var style2 = og.GMap((uint c) => c + 1);
-
-            var style3 =
-                og.GMap(
-                        (ControlPart b) =>
-                        {
-                            var letX = ObjectGraph.Create(mutableInflector, b);
-                            var letY = letX.GetDescendant(x => x.Text.Font);
-                            var letZ = letY.Bind(x => x.Set.FMap(y => y("Tahoma")));
-                            
-                            return letZ.GetValueOrDefault(b);
-                        })
-                  .Value;
-
-            var foo = og.GetDescendant(x => x.Toolbar.Button);
-
-            Test("Reflection          ", FetchColorsViaReflection, style);
             Test("Handwritten Methods ", FetchColorsViaMethods, style);
+            Test("Reflection          ", FetchColorsViaReflection, style);
             Test("TypeGraph           ", x => FetchColorsViaTg(x, tg), style);
-            Test("ObjectGraph         ", x => FetchColorsViaOg(x, og), style);
-
-            //var cache = graph.GetDescendants<uint>().ToList();
-            //Test("TypeGraph Cached    ", x => FetchColorsViaTgCached(x, cache), style);
+            
+            var cache = CacheAdapter.Create(DfsStrategy.Create<Style>());
+            Test("TypeGraph Cached    ", x => FetchColorsViaTgCached(x, tg, cache), style);
+            Console.ReadLine();
         }
 
         private static void InitializeMutable<T>(TypeGraph<Style> graphRoot, Style style, Func<T> value)
@@ -95,17 +85,25 @@
 
         private static void FetchColorsViaTg(Style style, TypeGraph<Style> typeGraph)
         {
-            var colors = typeGraph.GetDescendants<uint>().Select(x => x.Get(style)).ToList();
+            var strategy = DefaultStrategy.Create(style);
+
+            var colors = new List<uint>();
+            foreach (var d in typeGraph.GetDescendants<uint>(strategy))
+            {
+                colors.Add(d.Get(style));
+            }
         }
 
-        private static void FetchColorsViaOg(Style style, ObjectGraph<Style> objGraph)
+        private static void FetchColorsViaTgCached(Style style, TypeGraph<Style> typeGraph, IDescendingStrategy<Style> strategy)
         {
-            var colors = objGraph.GetDescendants<uint>().Select(x => x.Value).ToList();
-        }
+            strategy = new NotNullAdapter<Style>(style, strategy);
 
-        private static void FetchColorsViaTgCached(Style style, List<ITypeDescendant<Style, uint>> descendants)
-        {
-            var colors = descendants.Select(x => x.Get(style)).ToList();
+            var colors = new List<uint>();
+           
+            foreach(var d in typeGraph.GetDescendants<uint>(strategy))
+            {
+                colors.Add(d.Get(style));
+            }
         }
 
         private static void FetchColorsViaReflection(Style style)
@@ -124,7 +122,7 @@
                 var p = stack.Pop();
                 var t = p.GetType();
 
-                foreach (var prop in t.GetProperties().Where(x => x.CanRead))
+                foreach (var prop in t.GetProperties().Where(x => x.CanRead).Where(x => x.GetIndexParameters().Length == 0))
                 {
                     var v = prop.GetValue(p);
 
@@ -283,31 +281,6 @@
             yield return Tuple.Create(texture.Color3, p + ".Color3");
             yield return Tuple.Create(texture.Color4, p + ".Color4");
             yield return Tuple.Create(texture.Color5, p + ".Color5");
-        }
-    }
-
-    public static class TypeGraphExtensions
-    {
-        private static readonly IInflector Inflector = new ReflectingMutableTypeInflector();
-
-        public static T GMap<T, TA, TB>(this ITypeGraph<T> @this, T root, Func<TA, TB> f)
-            where TB : TA
-        {
-            var descendants = @this.GetDescendants<TA>();
-
-            return descendants.Aggregate(root, (x, y) => y.Set.FMap(set => set(x, f(y.Get(x)))).GetValueOrDefault(x));
-        }
-
-        public static IObjectGraph<T> GMap<T, TA, TB>(this IObjectGraph<T> @this, Func<TA, TB> f)
-            where TB : TA
-        {
-            var descendants = @this.GetDescendants<TA>().Select(x => x.Open())
-                                                        .Where(x => !x.IsEmpty)
-                                                        .Select(x => x.GetValueOrDefault());
-
-            var root = descendants.Aggregate(@this.Value, (x, y) => y.Set.FMap(z => z(x, f(y.Get(x)))).GetValueOrDefault(x));
-
-            return ObjectGraph.Create(@this.NodeType.Inflector, root);
         }
     }
 

@@ -2,8 +2,6 @@
 {
     using System;
 
-    using global::Inflection.Immutable;
-
     using Immutable.TypeSystem;
 
     public interface IInflector

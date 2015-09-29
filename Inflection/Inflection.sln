@@ -1,11 +1,17 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Inflection", "Inflection\Inflection.csproj", "{4A47C7F5-2E8A-4A75-BEE3-F4B99BC75E15}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Inflection.Sample", "Inflection.Sample\Inflection.Sample.csproj", "{77D0AE38-EED3-429E-911B-EBA25266675B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Inflection.TypeNode", "Inflection.TypeNode\Inflection.TypeNode.csproj", "{6408EF2C-5EB8-44C9-9239-CCCB809499D9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Inflection.TypeExtensions", "Inflection.TypeExtensions\Inflection.TypeExtensions.csproj", "{A96322AC-1089-4805-A87C-FDA6409E2F2E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Inflection.TypeGraph", "Inflection.TypeGraph\Inflection.TypeGraph.csproj", "{62B8A046-AFD1-444E-B63C-15E64DD458FD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,11 +27,20 @@ Global
 		{77D0AE38-EED3-429E-911B-EBA25266675B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{77D0AE38-EED3-429E-911B-EBA25266675B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{77D0AE38-EED3-429E-911B-EBA25266675B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6408EF2C-5EB8-44C9-9239-CCCB809499D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6408EF2C-5EB8-44C9-9239-CCCB809499D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6408EF2C-5EB8-44C9-9239-CCCB809499D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6408EF2C-5EB8-44C9-9239-CCCB809499D9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A96322AC-1089-4805-A87C-FDA6409E2F2E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A96322AC-1089-4805-A87C-FDA6409E2F2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A96322AC-1089-4805-A87C-FDA6409E2F2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A96322AC-1089-4805-A87C-FDA6409E2F2E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{62B8A046-AFD1-444E-B63C-15E64DD458FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{62B8A046-AFD1-444E-B63C-15E64DD458FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{62B8A046-AFD1-444E-B63C-15E64DD458FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{62B8A046-AFD1-444E-B63C-15E64DD458FD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
 	EndGlobalSection
 EndGlobal

@@ -11,23 +11,23 @@
     public class ImmutableProperty<TDeclaring, TProperty> : IImmutableProperty<TDeclaring, TProperty>
     {
         private readonly MemberInfo clrMember;
-        private readonly bool canRead;
-        private readonly bool canWrite;
+        private readonly bool hasGetter;
+        private readonly bool hasWither;
         private readonly Lazy<IImmutableType<TDeclaring>> declaringType;
         private readonly Lazy<IImmutableType<TProperty>> propertyType;
         private readonly Func<TDeclaring, TProperty> get;
-        private readonly IMaybe<Func<TDeclaring, TProperty, TDeclaring>> set;
+        private readonly IMaybe<Func<TDeclaring, TProperty, TDeclaring>> mWith;
         private readonly Expression<Func<TDeclaring, TProperty>> getExpression;
-        private readonly IMaybe<Expression<Func<TDeclaring, TProperty, TDeclaring>>> setExpression;
+        private readonly IMaybe<Expression<Func<TDeclaring, TProperty, TDeclaring>>> withExpression;
 
         public ImmutableProperty(
             MemberInfo memberInfo,
             Lazy<IImmutableType<TDeclaring>> declaringType,
             Lazy<IImmutableType<TProperty>> propertyType,
             Func<TDeclaring, TProperty> get,
-            IMaybe<Func<TDeclaring, TProperty, TDeclaring>> set, 
+            IMaybe<Func<TDeclaring, TProperty, TDeclaring>> mWith, 
             Expression<Func<TDeclaring, TProperty>> getExpression, 
-            IMaybe<Expression<Func<TDeclaring, TProperty, TDeclaring>>> setExpression)
+            IMaybe<Expression<Func<TDeclaring, TProperty, TDeclaring>>> withExpression)
         {
             this.clrMember = memberInfo;
 
@@ -35,13 +35,13 @@
             this.propertyType = propertyType;
 
             this.get = get;
-            this.set = set;
+            this.mWith = mWith;
             
             this.getExpression = getExpression;
-            this.setExpression = setExpression;
+            this.withExpression = withExpression;
 
-            this.canRead = get != null;
-            this.canWrite = set != null;
+            this.hasGetter = get != null;
+            this.hasWither = mWith.GetValueOrDefault() != null;
         }
 
         public MemberInfo ClrMember
@@ -49,7 +49,7 @@
             get { return this.clrMember; }
         }
 
-        IImmutableType IImmutableProperty.DeclaringType
+        IImmutableType IImmutableMember.DeclaringType
         {
             get { return this.declaringType.Value; }
         }
@@ -59,14 +59,14 @@
             get { return this.propertyType.Value; }
         }
 
-        public bool CanRead
+        public bool HasGetter
         {
-            get { return this.canRead; }
+            get { return this.hasGetter; }
         }
 
-        public bool CanWrite
+        public bool HasWither
         {
-            get { return this.canWrite; }
+            get { return this.hasWither; }
         }
 
         public IImmutableType<TDeclaring> DeclaringType
@@ -84,24 +84,9 @@
             get { return this.get; }
         }
 
-        public IMaybe<Func<TDeclaring, TProperty, TDeclaring>> Set
+        public IMaybe<Func<TDeclaring, TProperty, TDeclaring>> With
         {
-            get { return this.set; }
-        }
-
-        Expression IImmutableProperty.GetExpression
-        {
-            get { return this.getExpression; }
-        }
-
-        public Expression<Func<TDeclaring, TProperty>> GetExpression
-        {
-            get { return this.getExpression; }
-        }
-
-        IMaybe<Expression> IImmutableProperty.SetExpression
-        {
-            get { return this.setExpression; }
+            get { return this.mWith; }
         }
 
         void IImmutableProperty.Accept(IImmutablePropertyVisitor visitor)
@@ -109,14 +94,50 @@
             visitor.Visit(this);
         }
 
-        public IMaybe<Expression<Func<TDeclaring, TProperty, TDeclaring>>> SetExpression
+        public object GetValue(object obj)
         {
-            get { return this.setExpression; }
+            if (!(obj is TDeclaring))
+            {
+                throw new ArgumentException(string.Format("Wrong argument type. Expected '{0}'", typeof(TDeclaring)), nameof(obj));
+            }
+
+            return this.get((TDeclaring)obj);
         }
 
-        public void Accept(IImmutablePropertyVisitor<TDeclaring> visitor)
+        public object WithValue(object obj, object value)
+        {
+            var with = this.mWith.GetValueOrDefault();
+            if (with == null)
+            {
+                throw new InvalidOperationException(string.Format("Property '{0}' has no accessible wither", this));
+            }
+
+            if (!(obj is TDeclaring))
+            {
+                throw new ArgumentException(string.Format("Wrong argument type. Expected '{0}'", typeof(TDeclaring)), nameof(obj));
+            }
+
+            if (!(value is TProperty) && (value != (object)default(TProperty)))
+            {
+                throw new ArgumentException(string.Format("Wrong argument type. Expected '{0}'", typeof(TProperty)), nameof(value));
+            }
+
+            return with((TDeclaring)obj, (TProperty)value);
+        }
+
+        void IImmutableProperty<TProperty>.Accept(IImmutablePropertyVisitor<TProperty> visitor)
         {
             visitor.Visit(this);
+        }
+
+        void IImmutablePropertyMember<TDeclaring>.Accept(IImmutablePropertyMemberVisitor<TDeclaring> visitor)
+        {
+            visitor.Visit(this);
+        }
+
+        public override string ToString()
+        {
+            return this.ClrMember.ToString();
         }
     }
 }

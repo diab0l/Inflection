@@ -1,8 +1,6 @@
 ﻿namespace Inflection
 {
     using System;
-    using System.Collections.Generic;
-    using System.Linq;
     using System.Linq.Expressions;
     using System.Reflection;
 
@@ -12,39 +10,7 @@
     //// ReSharper disable AccessToModifiedClosure
     public class ReflectingMutableTypeInflector : InflectorBase
     {
-        private readonly Dictionary<Type, IImmutableType> cachedDescriptors = new Dictionary<Type, IImmutableType>();
-
-        public override IImmutableType<TDeclaring> Inflect<TDeclaring>()
-        {
-            if (this.cachedDescriptors.ContainsKey(typeof(TDeclaring)))
-            {
-                return this.cachedDescriptors[typeof(TDeclaring)] as IImmutableType<TDeclaring>;
-            }
-
-            ImmutableType<TDeclaring> desc = null;
-
-            var tdLazy = new Lazy<IImmutableType<TDeclaring>>(() => desc);
-
-            var props = typeof(TDeclaring).GetProperties()
-                                          .Where(x => x.CanRead)
-                                          .Where(x => !x.GetIndexParameters().Any())
-                                          .Select(p => this.DescribeProperty(p, tdLazy));
-
-            desc = new ImmutableType<TDeclaring>(this, props);
-
-            this.cachedDescriptors[typeof(TDeclaring)] = desc;
-
-            return desc;
-        }
-
-        public override IImmutableType Inflect(Type tDeclaring)
-        {
-            var method = typeof(ReflectingMutableTypeInflector).GetMethod("Describe", Type.EmptyTypes);
-
-            return method.MakeGenericMethod(tDeclaring).Invoke(this, new object[0]) as IImmutableType;
-        }
-
-        private IImmutableProperty<TDeclaring> DescribeProperty<TDeclaring>(
+        protected override IImmutablePropertyMember<TDeclaring> DescribeProperty<TDeclaring>(
             PropertyInfo prop,
             Lazy<IImmutableType<TDeclaring>> declaringType)
         {
@@ -63,7 +29,7 @@
 
             var method = foo.Method.GetGenericMethodDefinition().MakeGenericMethod(typeof(TDeclaring), prop.PropertyType);
 
-            return method.Invoke(this, new object[] { prop, declaringType, propertyType, getter, setter }) as IImmutableProperty<TDeclaring>;
+            return method.Invoke(this, new object[] { prop, declaringType, propertyType, getter, setter }) as IImmutablePropertyMember<TDeclaring>;
         }
 
         private IImmutableProperty<TDeclaring, TProperty> DescribeProperty<TDeclaring, TProperty>(
@@ -75,13 +41,48 @@
         {
             if (get == null)
             {
-                throw new ArgumentNullException("get");
+                throw new ArgumentNullException(nameof(get));
             }
 
             var getCompiled = get.Compile();
             var setCompiled = set.Bind(x => Maybe.Return(x.Compile()));
 
             return new ImmutableProperty<TDeclaring, TProperty>(prop, declaringType, propertyType, getCompiled, setCompiled, get, set);
+        }
+
+        protected static IMaybe<Expression> WrapSetter(Type tDeclaring, PropertyInfo prop)
+        {
+            var tProp = prop.PropertyType;
+            if (tDeclaring == null)
+            {
+                throw new ArgumentException("Cannot get declaring type for property " + prop.Name);
+            }
+
+            var funcType = typeof(Func<,,>).MakeGenericType(tDeclaring, tProp, tDeclaring);
+            var exprType = typeof(Expression<>).MakeGenericType(funcType);
+
+            if (!prop.CanWrite)
+            {
+                var nothing = typeof(Nothing<>).MakeGenericType(exprType);
+
+                return (IMaybe<Expression>)DefaultHelper.GetDefault(nothing);
+            }
+
+            var p0 = Expression.Parameter(tDeclaring, tDeclaring.Name.ToLower().Substring(0, 1));
+            var p1 = Expression.Parameter(tProp, "value");
+
+            // (s, v) => { s.Prop = v; return s; }
+            var assign = Expression.Assign(Expression.MakeMemberAccess(p0, prop), p1);
+            var body = Expression.Block(
+                                        assign,
+                                        Expression.Label(Expression.Label(tDeclaring), p0));
+
+            var expr = Expression.Lambda(funcType, body, p0, p1);
+
+            var just = typeof(Just<>).MakeGenericType(exprType);
+
+            var justCtor = just.GetConstructor(new[] { exprType });
+            return (IMaybe<Expression>)justCtor.Invoke(new object[] { expr });
         }
     }
     //// ReSharper restore AccessToModifiedClosure

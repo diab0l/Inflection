@@ -1,17 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{4A47C7F5-2E8A-4A75-BEE3-F4B99BC75E15}</ProjectGuid>
+    <ProjectGuid>{A96322AC-1089-4805-A87C-FDA6409E2F2E}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Inflection</RootNamespace>
-    <AssemblyName>Inflection</AssemblyName>
+    <RootNamespace>Inflection.TypeExtensions</RootNamespace>
+    <AssemblyName>Inflection.TypeExtensions</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -30,44 +29,32 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  <PropertyGroup>
-    <StartupObject />
-  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
-    <Reference Include="System.Collections.Immutable">
-      <HintPath>..\packages\Microsoft.Bcl.Immutable.1.0.34\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
-    </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Immutable\Extensions\DictionaryExtensions.cs" />
-    <Compile Include="Immutable\Extensions\ExpressionExtensions.cs" />
-    <Compile Include="Immutable\Extensions\ImmutableDictionaryExtensions.cs" />
-    <Compile Include="Immutable\Monads\Maybe.cs" />
-    <Compile Include="Immutable\TypeSystem\IImmutableMember.cs" />
-    <Compile Include="Immutable\TypeSystem\MemberInfoEqualityComparer.cs" />
-    <Compile Include="Immutable\TypeSystem\Visitors\IImmutableTypeVisitor.cs" />
-    <Compile Include="Immutable\TypeSystem\ImmutableProperty.cs" />
-    <Compile Include="Immutable\TypeSystem\ImmutableType.cs" />
-    <Compile Include="Immutable\TypeSystem\IImmutableProperty.cs" />
-    <Compile Include="Immutable\TypeSystem\Visitors\IImmutablePropertyVisitor.cs" />
-    <Compile Include="Immutable\TypeSystem\IImmutableType.cs" />
-    <Compile Include="IInflector.cs" />
-    <Compile Include="InflectorBase.cs" />
-    <Compile Include="ReflectingImmutableTypeInflector.cs" />
-    <Compile Include="ReflectingMutableTypeInflector.cs" />
+    <Compile Include="Extension\ImmutableTypeExtensions.cs" />
+    <Compile Include="Extension\IQuery.cs" />
+    <Compile Include="Extension\IQueryTransform.cs" />
+    <Compile Include="Extension\ITransform.cs" />
+    <Compile Include="Extension\Query.cs" />
+    <Compile Include="Extension\QueryTransform.cs" />
+    <Compile Include="Extension\Transform.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <ProjectReference Include="..\Inflection\Inflection.csproj">
+      <Project>{4A47C7F5-2E8A-4A75-BEE3-F4B99BC75E15}</Project>
+      <Name>Inflection</Name>
+    </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

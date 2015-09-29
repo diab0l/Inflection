@@ -14,7 +14,7 @@
 
             if (@this is BinaryExpression)
             {
-                var expr = @this as BinaryExpression;
+                var expr = (BinaryExpression)@this;
                 var left = Replace(expr.Left, old, @new);
                 var right = Replace(expr.Right, old, @new);
 
@@ -23,7 +23,7 @@
 
             if (@this is BlockExpression)
             {
-                var expr = @this as BlockExpression;
+                var expr = (BlockExpression)@this;
 
                 var exprs = expr.Expressions.Select(x => Replace(x, old, @new));
 
@@ -32,7 +32,7 @@
 
             if (@this is ConditionalExpression)
             {
-                var expr = @this as ConditionalExpression;
+                var expr = (ConditionalExpression)@this;
 
                 var test = Replace(expr.Test, old, @new);
                 var ifTrue = Replace(expr.IfTrue, old, @new);
@@ -43,7 +43,7 @@
 
             if (@this is DynamicExpression)
             {
-                var expr = @this as DynamicExpression;
+                var expr = (DynamicExpression)@this;
 
                 var args = expr.Arguments.Select(x => x.Replace(old, @new));
 
@@ -52,7 +52,7 @@
 
             if (@this is GotoExpression)
             {
-                var expr = @this as GotoExpression;
+                var expr = (GotoExpression)@this;
 
                 var value = expr.Value.Replace(old, @new);
 
@@ -61,7 +61,7 @@
 
             if (@this is IndexExpression)
             {
-                var expr = @this as IndexExpression;
+                var expr = (IndexExpression)@this;
 
                 var obj = expr.Object.Replace(old, @new);
                 var args = expr.Arguments.Select(x => x.Replace(old, @new));
@@ -71,7 +71,7 @@
 
             if (@this is InvocationExpression)
             {
-                var expr = @this as InvocationExpression;
+                var expr = (InvocationExpression)@this;
 
                 var x = expr.Expression.Replace(old, @new);
                 var args = expr.Arguments.Select(y => y.Replace(old, @new));
@@ -81,7 +81,7 @@
 
             if (@this is LabelExpression)
             {
-                var lExpr = @this as LabelExpression;
+                var lExpr = (LabelExpression)@this;
                 var dValue = Replace(lExpr.DefaultValue, old, @new);
 
                 return lExpr.Update(lExpr.Target, dValue);
@@ -89,7 +89,7 @@
 
             if (@this is LambdaExpression)
             {
-                var expr = @this as LambdaExpression;
+                var expr = (LambdaExpression)@this;
 
                 var body = expr.Body.Replace(old, @new);
                 var name = expr.Name;
@@ -101,7 +101,7 @@
 
             if (@this is ListInitExpression)
             {
-                var expr = @this as ListInitExpression;
+                var expr = (ListInitExpression)@this;
 
                 var nExpr = (NewExpression)expr.NewExpression.Replace(old, @new);
                 var args = expr.Initializers.Select(x => x.Update(x.Arguments.Select(y => y.Replace(old, @new))));
@@ -111,7 +111,7 @@
 
             if (@this is LoopExpression)
             {
-                var expr = @this as LoopExpression;
+                var expr = (LoopExpression)@this;
 
                 var body = expr.Body.Replace(old, @new);
 
@@ -120,7 +120,7 @@
 
             if (@this is MemberExpression)
             {
-                var mExpr = @this as MemberExpression;
+                var mExpr = (MemberExpression)@this;
 
                 var expr = Replace(mExpr.Expression, old, @new);
 
@@ -129,7 +129,7 @@
            
             if (@this is MemberInitExpression)
             {
-                var expr = @this as MemberInitExpression;
+                var expr = (MemberInitExpression)@this;
 
                 var nExpr = (NewExpression)expr.NewExpression.Replace(old, @new);
 
@@ -138,7 +138,7 @@
 
             if (@this is MethodCallExpression)
             {
-                var expr = @this as MethodCallExpression;
+                var expr = (MethodCallExpression)@this;
 
                 var x = expr.Object.Replace(old, @new);
                 var args = expr.Arguments.Select(y => y.Replace(old, @new));
@@ -148,7 +148,7 @@
 
             if (@this is NewExpression)
             {
-                var expr = @this as NewExpression;
+                var expr = (NewExpression)@this;
 
                 var args = expr.Arguments.Select(x => x.Replace(old, @new));
 
@@ -157,7 +157,7 @@
 
             if (@this is NewArrayExpression)
             {
-                var expr = @this as NewArrayExpression;
+                var expr = (NewArrayExpression)@this;
 
                 var args = expr.Expressions.Select(x => x.Replace(old, @new));
 
@@ -166,7 +166,7 @@
 
             if (@this is RuntimeVariablesExpression)
             {
-                var expr = @this as RuntimeVariablesExpression;
+                var expr = (RuntimeVariablesExpression)@this;
 
                 var ps = expr.Variables.Select(x => x.Replace(old, @new)).OfType<ParameterExpression>();
 
@@ -175,7 +175,7 @@
 
             if (@this is SwitchExpression)
             {
-                var expr = @this as SwitchExpression;
+                var expr = (SwitchExpression)@this;
 
                 var v = expr.SwitchValue.Replace(old, @new);
                 var cs = expr.Cases.Select(x => x.Update(x.TestValues.Select(y => y.Replace(old, @new)), x.Body.Replace(old, @new)));
@@ -186,7 +186,7 @@
 
             if (@this is TryExpression)
             {
-                var expr = @this as TryExpression;
+                var expr = (TryExpression)@this;
 
                 var body = expr.Body.Replace(old, @new);
                 var hs = expr.Handlers.Select(x => x.Update((ParameterExpression)x.Variable.Replace(old, @new), x.Filter.Replace(old, @new), x.Body.Replace(old, @new)));
@@ -198,14 +198,14 @@
 
             if (@this is TypeBinaryExpression)
             {
-                var expr = @this as TypeBinaryExpression;
+                var expr = (TypeBinaryExpression)@this;
 
                 return expr.Update(expr.Expression.Replace(old, @new));
             }
 
             if (@this is UnaryExpression)
             {
-                var uExpr = @this as UnaryExpression;
+                var uExpr = (UnaryExpression)@this;
 
                 var op = Replace(uExpr.Operand, old, @new);
 

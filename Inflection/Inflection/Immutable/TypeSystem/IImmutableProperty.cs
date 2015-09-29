@@ -1,49 +1,42 @@
 ﻿namespace Inflection.Immutable.TypeSystem
 {
     using System;
-    using System.Linq.Expressions;
-    using System.Reflection;
 
     using Monads;
 
     using Visitors;
 
-    public interface IImmutableProperty
+    public interface IImmutableProperty : IImmutableMember
     {
-        MemberInfo ClrMember { get; }
-
-        IImmutableType DeclaringType { get; }
-
         IImmutableType PropertyType { get; }
 
-        bool CanRead { get; }
+        bool HasGetter { get; }
 
-        bool CanWrite { get; }
-
-        Expression GetExpression { get; }
-
-        IMaybe<Expression> SetExpression { get; }
+        bool HasWither { get; }
 
         void Accept(IImmutablePropertyVisitor visitor);
+
+        object GetValue(object obj);
+        
+        object WithValue(object obj, object value);
     }
 
-    public interface IImmutableProperty<TDeclaring> : IImmutableProperty
-    {
-        new IImmutableType<TDeclaring> DeclaringType { get; }
-
-        void Accept(IImmutablePropertyVisitor<TDeclaring> visitor);
-    }
-
-    public interface IImmutableProperty<TDeclaring, TProperty> : IImmutableProperty<TDeclaring>
+    public interface IImmutableProperty<TProperty> : IImmutableProperty
     {
         new IImmutableType<TProperty> PropertyType { get; }
 
+        void Accept(IImmutablePropertyVisitor<TProperty> visitor);
+    }
+
+    public interface IImmutablePropertyMember<TDeclaring> : IImmutableProperty, IImmutableMember<TDeclaring>
+    {
+        void Accept(IImmutablePropertyMemberVisitor<TDeclaring> visitor);
+    }
+
+    public interface IImmutableProperty<TDeclaring, TProperty> : IImmutablePropertyMember<TDeclaring>, IImmutableProperty<TProperty>
+    {
         Func<TDeclaring, TProperty> Get { get; }
 
-        IMaybe<Func<TDeclaring, TProperty, TDeclaring>> Set { get; }
-
-        new Expression<Func<TDeclaring, TProperty>> GetExpression { get; }
-
-        new IMaybe<Expression<Func<TDeclaring, TProperty, TDeclaring>>> SetExpression { get; }
+        IMaybe<Func<TDeclaring, TProperty, TDeclaring>> With { get; }
     }
 }

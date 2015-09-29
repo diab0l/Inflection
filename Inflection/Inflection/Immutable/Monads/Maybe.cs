@@ -19,41 +19,52 @@
             return new Nothing<TA>();
         }
 
-        public static IMaybe<TB> Bind<TA, TB>(this IMaybe<TA> ma, Func<TA, IMaybe<TB>> f)
-        {
-            if (ma == null)
-            {
-                throw new ArgumentNullException();
-            }
+        //public static IMaybe<TB> Bind<TA, TB>(this IMaybe<TA> ma, Func<TA, IMaybe<TB>> f)
+        //{
+        //    if (ma == null)
+        //    {
+        //        throw new ArgumentNullException();
+        //    }
+            
+        //    return !ma.IsEmpty
+        //        ? f(((Just<TA>)ma).Value)
+        //        : new Nothing<TB>();
+        //}
 
-            return !ma.IsEmpty
-                ? f(((Just<TA>)ma).Value)
-                : new Nothing<TB>();
-        }
+        //public static IMaybe<TB> FMap<TA, TB>(this IMaybe<TA> ma, Func<TA, TB> f)
+        //{
+        //    if (ma == null)
+        //    {
+        //        throw new ArgumentNullException();
+        //    }
 
-        public static IMaybe<TB> FMap<TA, TB>(this IMaybe<TA> ma, Func<TA, TB> f)
-        {
-            if (ma == null)
-            {
-                throw new ArgumentNullException();
-            }
-
-            return !ma.IsEmpty
-                ? (IMaybe<TB>)new Just<TB>(f(((Just<TA>)ma).Value))
-                : new Nothing<TB>();
-        }
+        //    return !ma.IsEmpty
+        //        ? Maybe.Return(f(((Just<TA>)ma).Value))
+        //        : new Nothing<TB>();
+        //}
 
         public static T GetValueOrDefault<T>(this IMaybe<T> @this, T @default = default(T))
         {
-            return @this.IsEmpty
-                ? @default
-                : ((Just<T>)@this).Value;
+            var result = @default;
+            
+            @this.FMap(
+                       x =>
+                       {
+                           result = x;
+                           return x;
+                       });
+
+            return result;
         }
     }
 
     public interface IMaybe<out T>
     {
-        bool IsEmpty { get; }
+        IMaybe<TB> FMap<TB>(Func<T, TB> f);
+
+        IMaybe<TB> Bind<TB>(Func<T, IMaybe<TB>> f);
+
+        T GetValueOrDefault();
     }
 
     public struct Just<T> : IMaybe<T>
@@ -62,25 +73,24 @@
 
         public Just(T value)
         {
-            if (!(value is T))
-            {
-                throw new ArgumentNullException("value");
-            }
-
             this.Value = value;
         }
 
-        public bool IsEmpty
+        public IMaybe<TB> FMap<TB>(Func<T, TB> f)
         {
-            get { return false; }
+            return new Just<TB>(f(this.Value));
         }
 
-        /// <summary>
-        /// Returns the fully qualified type name of this instance.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="T:System.String"/> containing a fully qualified type name.
-        /// </returns>
+        public IMaybe<TB> Bind<TB>(Func<T, IMaybe<TB>> f)
+        {
+            return f(this.Value);
+        }
+
+        public T GetValueOrDefault()
+        {
+            return this.Value;
+        }
+
         public override string ToString()
         {
             return string.Format("Just({0})", this.Value);
@@ -89,17 +99,21 @@
 
     public struct Nothing<T> : IMaybe<T>
     {
-        public bool IsEmpty
+        public IMaybe<TB> FMap<TB>(Func<T, TB> f)
         {
-            get { return true; }
+            return new Nothing<TB>();
         }
 
-        /// <summary>
-        /// Returns the fully qualified type name of this instance.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="T:System.String"/> containing a fully qualified type name.
-        /// </returns>
+        public IMaybe<TB> Bind<TB>(Func<T, IMaybe<TB>> f)
+        {
+            return new Nothing<TB>();
+        }
+
+        public T GetValueOrDefault()
+        {
+            return default(T);
+        }
+
         public override string ToString()
         {
             return "Nothing";

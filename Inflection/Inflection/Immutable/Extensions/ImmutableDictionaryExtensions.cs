@@ -11,7 +11,7 @@
         {
             if (@this == null)
             {
-                throw new ArgumentNullException("this");
+                throw new ArgumentNullException(nameof(@this));
             }
 
             TValue value;

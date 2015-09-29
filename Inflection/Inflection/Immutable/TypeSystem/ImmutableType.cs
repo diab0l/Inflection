@@ -17,12 +17,12 @@
     {
         private readonly IInflector inflector;
 
-        private readonly Lazy<ImmutableDictionary<MemberInfo, IImmutableProperty<TDeclaring>>> properties;
+        private readonly Lazy<ImmutableDictionary<MemberInfo, IImmutablePropertyMember<TDeclaring>>> propertyLookup;
 
-        public ImmutableType(IInflector inflector, IEnumerable<IImmutableProperty<TDeclaring>> properties)
+        public ImmutableType(IInflector inflector, IEnumerable<IImmutablePropertyMember<TDeclaring>> properties)
         {
             this.inflector = inflector;
-            this.properties = new Lazy<ImmutableDictionary<MemberInfo, IImmutableProperty<TDeclaring>>>(
+            this.propertyLookup = new Lazy<ImmutableDictionary<MemberInfo, IImmutablePropertyMember<TDeclaring>>>(
                 () => properties.ToImmutableDictionary(x => x.ClrMember));
         }
 
@@ -36,14 +36,9 @@
             get { return typeof(TDeclaring); }
         }
 
-        protected ImmutableDictionary<MemberInfo, IImmutableProperty<TDeclaring>> Properties
-        {
-            get { return this.properties.Value; }
-        }
-
         IEnumerable<IImmutableProperty> IImmutableType.GetProperties()
         {
-            return this.Properties.Values;
+            return this.propertyLookup.Value.Values;
         }
 
         public void Accept(IImmutableTypeVisitor visitor)
@@ -51,9 +46,19 @@
             visitor.Visit(this);
         }
 
-        public void Accept(IImmutableTypePropertiesVisitor visitor)
+        public bool Extends(IImmutableType type)
         {
-            visitor.Visit(this.Properties.MaybeGetValue);
+            return this.ClrType.IsAssignableFrom(type.ClrType);
+        }
+        
+        IMaybe<IImmutableProperty> IImmutableType.GetProperty(MemberInfo memberInfo)
+        {
+            return this.propertyLookup.Value.MaybeGetValue(memberInfo);
+        }
+
+        public IMaybe<IImmutablePropertyMember<TDeclaring>> GetProperty(MemberInfo memberInfo)
+        {
+            return this.propertyLookup.Value.MaybeGetValue(memberInfo);
         }
 
         public IMaybe<IImmutableProperty<TDeclaring, TChild>> GetProperty<TChild>(Expression<Func<TDeclaring, TChild>> propExpr)
@@ -61,7 +66,7 @@
             var memExpr = propExpr.Body as MemberExpression;
             if (memExpr == null)
             {
-                throw new ArgumentException("Expression must be a member access expression", "propExpr");
+                throw new ArgumentException("Expression must be a member access expression", nameof(propExpr));
             }
 
             var prop = memExpr.Member as PropertyInfo;
@@ -70,14 +75,15 @@
                 throw new ArgumentException();
             }
 
-            return this.Properties
+            return this.propertyLookup
+                       .Value
                        .MaybeGetValue(prop)
                        .Bind(x => Maybe.Return(x as IImmutableProperty<TDeclaring, TChild>));
         }
 
-        public IEnumerable<IImmutableProperty<TDeclaring>> GetProperties()
+        public IEnumerable<IImmutablePropertyMember<TDeclaring>> GetProperties()
         {
-            return this.Properties.Values;
+            return this.propertyLookup.Value.Values;
         }
 
         public IEnumerable<IImmutableProperty<TDeclaring, TProperty>> GetProperties<TProperty>()
@@ -85,9 +91,9 @@
             return this.GetProperties().OfType<IImmutableProperty<TDeclaring, TProperty>>();
         }
 
-        public void Accept(IImmutableTypePropertiesVisitor<TDeclaring> visitor)
+        public override string ToString()
         {
-            visitor.Visit(this.Properties.MaybeGetValue);
+            return this.ClrType.ToString();
         }
     }
 }

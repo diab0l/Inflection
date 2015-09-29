@@ -51,13 +51,13 @@
     <Compile Include="Immutable\Extensions\ImmutableDictionaryExtensions.cs" />
     <Compile Include="Immutable\Monads\Maybe.cs" />
     <Compile Include="Immutable\TypeSystem\IImmutableMember.cs" />
+    <Compile Include="Immutable\TypeSystem\IImmutableType.cs" />
     <Compile Include="Immutable\TypeSystem\MemberInfoEqualityComparer.cs" />
     <Compile Include="Immutable\TypeSystem\Visitors\IImmutableTypeVisitor.cs" />
     <Compile Include="Immutable\TypeSystem\ImmutableProperty.cs" />
     <Compile Include="Immutable\TypeSystem\ImmutableType.cs" />
     <Compile Include="Immutable\TypeSystem\IImmutableProperty.cs" />
     <Compile Include="Immutable\TypeSystem\Visitors\IImmutablePropertyVisitor.cs" />
-    <Compile Include="Immutable\TypeSystem\IImmutableType.cs" />
     <Compile Include="IInflector.cs" />
     <Compile Include="InflectorBase.cs" />
     <Compile Include="ReflectingImmutableTypeInflector.cs" />
